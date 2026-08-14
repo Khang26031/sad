@@ -7,7 +7,7 @@ DROP FUNCTION IF EXISTS public.handle_new_user();
 DROP FUNCTION IF EXISTS public.process_completed_order(p_order_id UUID);
 DROP FUNCTION IF EXISTS public.get_order_by_tx_ref(p_tx_ref TEXT);
 DROP FUNCTION IF EXISTS public.get_orders_by_email(p_email TEXT);
-DROP FUNCTION IF EXISTS public.is_admin(p_user_id UUID);
+DROP FUNCTION IF EXISTS public.is_admin(p_user_id UUID) CASCADE;
 
 DROP TABLE IF EXISTS public.items CASCADE;
 DROP TABLE IF EXISTS public.orders CASCADE;
