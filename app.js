@@ -80,6 +80,18 @@ async function checkAuthSession() {
     navDepositLink.classList.remove('d-none');
     navHistoryLink.classList.remove('d-none');
     
+    // Sync Drawer
+    if (drawerDepositLink) drawerDepositLink.classList.remove('d-none');
+    if (drawerHistoryLink) drawerHistoryLink.classList.remove('d-none');
+    if (drawerAuthBtn) {
+      drawerAuthBtn.innerText = 'Đăng Xuất';
+      drawerAuthBtn.onclick = async (e) => {
+        e.preventDefault();
+        await supabaseClient.auth.signOut();
+        location.reload();
+      };
+    }
+    
     // Bind click to log out
     authBtn.onclick = async (e) => {
       e.preventDefault();
@@ -98,6 +110,10 @@ async function checkAuthSession() {
       userProfile = profile;
       navUserBalance.innerText = `Ví: ${formatVND(profile.balance)}`;
       navBalanceWrapper.classList.remove('d-none');
+      
+      // Sync Drawer
+      if (drawerUserBalance) drawerUserBalance.innerText = `Ví: ${formatVND(profile.balance)}`;
+      if (drawerBalanceWrapper) drawerBalanceWrapper.classList.remove('d-none');
     }
   } else {
     authBtn.innerText = 'Đăng Nhập';
@@ -105,6 +121,16 @@ async function checkAuthSession() {
     navDepositLink.classList.add('d-none');
     navHistoryLink.classList.add('d-none');
     navBalanceWrapper.classList.add('d-none');
+    
+    // Sync Drawer
+    if (drawerDepositLink) drawerDepositLink.classList.add('d-none');
+    if (drawerHistoryLink) drawerHistoryLink.classList.add('d-none');
+    if (drawerBalanceWrapper) drawerBalanceWrapper.classList.add('d-none');
+    if (drawerAuthBtn) {
+      drawerAuthBtn.innerText = 'Đăng Nhập';
+      drawerAuthBtn.onclick = () => location.href = '/login';
+      drawerAuthBtn.style.background = 'var(--accent-primary)';
+    }
   }
 }
 
@@ -210,7 +236,7 @@ function renderProducts(products) {
     const card = document.createElement('div');
     card.className = 'glass-panel product-card';
     card.innerHTML = `
-      <img src="${p.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60'}" class="product-img" alt="${p.name}">
+      <img src="${p.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60'}" class="product-img" alt="${p.name}" onclick="location.href='/san-pham/${p.slug}'" style="cursor: pointer;">
       <div class="product-content">
         <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--accent-primary); font-weight: 700; margin-bottom: 0.25rem;">${p.categories?.name || 'Sản phẩm'}</div>
         <h4 class="product-title" onclick="location.href='/san-pham/${p.slug}'" style="cursor: pointer;">${p.name}</h4>
@@ -623,3 +649,54 @@ window.copyText = function(elementId) {
 };
 
 initShop();
+
+
+// Hamburger Drawer toggle logic
+const hamburgerBtn = document.getElementById('hamburger-btn');
+const navDrawer = document.getElementById('nav-drawer');
+const drawerOverlay = document.getElementById('drawer-overlay');
+const drawerCloseBtn = document.getElementById('drawer-close-btn');
+
+const drawerShopLink = document.getElementById('drawer-shop-link');
+const drawerDepositLink = document.getElementById('drawer-deposit-link');
+const drawerHistoryLink = document.getElementById('drawer-history-link');
+const drawerBalanceWrapper = document.getElementById('drawer-balance-wrapper');
+const drawerUserBalance = document.getElementById('drawer-user-balance');
+const drawerAuthBtn = document.getElementById('drawer-auth-btn');
+
+function toggleDrawer(open) {
+  if (open) {
+    navDrawer.classList.add('open');
+    drawerOverlay.classList.add('open');
+  } else {
+    navDrawer.classList.remove('open');
+    drawerOverlay.classList.remove('open');
+  }
+}
+
+if (hamburgerBtn) hamburgerBtn.onclick = () => toggleDrawer(true);
+if (drawerCloseBtn) drawerCloseBtn.onclick = () => toggleDrawer(false);
+if (drawerOverlay) drawerOverlay.onclick = () => toggleDrawer(false);
+
+// Drawer Navigation SPA binds
+if (drawerShopLink) {
+  drawerShopLink.onclick = (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+    navShopLink.click();
+  };
+}
+if (drawerDepositLink) {
+  drawerDepositLink.onclick = (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+    navDepositLink.click();
+  };
+}
+if (drawerHistoryLink) {
+  drawerHistoryLink.onclick = (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+    navHistoryLink.click();
+  };
+}

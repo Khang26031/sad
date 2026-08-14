@@ -63,7 +63,10 @@
 
   <!-- Navbar -->
   <div class="navbar">
-    <div class="logo" onclick="location.href='/'">LEGION STORE</div>
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <div class="hamburger-menu" id="hamburger-btn">&#9776;</div>
+      <div class="logo" onclick="location.href='/'">LEGION STORE</div>
+    </div>
     <ul class="nav-links">
       <li><a href="/" class="nav-link" id="nav-shop-link">Cửa Hàng</a></li>
       <li><a href="/#deposit" class="nav-link" id="nav-deposit-link">Nạp Tiền</a></li>
@@ -72,6 +75,24 @@
         <div id="nav-user-balance" style="font-weight: 700; color: var(--success); padding: 0.5rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">Ví: 0đ</div>
       </li>
       <li><a href="/login" class="nav-link" id="nav-auth-btn">Đăng Nhập</a></li>
+    </ul>
+  </div>
+
+  <!-- Navigation Drawer (Mobile) -->
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <div class="nav-drawer" id="nav-drawer">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);">
+      <div class="logo">LEGION STORE</div>
+      <button id="drawer-close-btn" style="background: none; border: none; color: var(--text-secondary); font-size: 1.75rem; cursor: pointer; line-height: 1;">&times;</button>
+    </div>
+    <ul style="list-style: none; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+      <li><a href="/" class="drawer-link active" id="drawer-shop-link">Cửa Hàng</a></li>
+      <li><a href="#deposit" class="drawer-link" id="drawer-deposit-link">Nạp Tiền</a></li>
+      <li><a href="#purchase-history" class="drawer-link" id="drawer-history-link">Lịch Sử Mua Hàng</a></li>
+      <li id="drawer-balance-wrapper" class="d-none" style="padding: 0.75rem 1rem;">
+        <div id="drawer-user-balance" style="font-weight: 700; color: var(--success); padding: 0.5rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px; text-align: center;">Ví: 0đ</div>
+      </li>
+      <li><a href="/login" class="drawer-link" id="drawer-auth-btn" style="background: var(--accent-primary); color: #fff; text-align: center; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">Đăng Nhập</a></li>
     </ul>
   </div>
 
@@ -203,6 +224,32 @@ const { createClient } = supabase;
       await loadProductDetails();
     }
 
+    
+    // Hamburger Drawer logic
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const navDrawer = document.getElementById('nav-drawer');
+    const drawerOverlay = document.getElementById('drawer-overlay');
+    const drawerCloseBtn = document.getElementById('drawer-close-btn');
+    const drawerAuthBtn = document.getElementById('drawer-auth-btn');
+    const drawerUserBalance = document.getElementById('drawer-user-balance');
+    const drawerBalanceWrapper = document.getElementById('drawer-balance-wrapper');
+
+    function toggleDrawer(open) {
+      if (open) {
+        navDrawer.classList.add('open');
+        drawerOverlay.classList.add('open');
+      } else {
+        navDrawer.classList.remove('open');
+        drawerOverlay.classList.remove('open');
+      }
+    }
+
+    if (hamburgerBtn) hamburgerBtn.onclick = () => toggleDrawer(true);
+    if (drawerCloseBtn) drawerCloseBtn.onclick = () => toggleDrawer(false);
+    if (drawerOverlay) drawerOverlay.onclick = () => toggleDrawer(false);
+
+    // Sync Drawer in checkAuthSession
+    
     async function checkAuthSession() {
       const { data: { session } } = await supabaseClient.auth.getSession();
       authSession = session;
@@ -216,6 +263,16 @@ const { createClient } = supabase;
           await supabaseClient.auth.signOut();
           location.href = '/';
         };
+        
+        // Sync Drawer
+        if (drawerAuthBtn) {
+          drawerAuthBtn.innerText = 'Đăng Xuất';
+          drawerAuthBtn.onclick = async (e) => {
+            e.preventDefault();
+            await supabaseClient.auth.signOut();
+            location.href = '/';
+          };
+        }
 
         // Fetch User balance
         const { data: profile } = await supabaseClient
@@ -228,11 +285,22 @@ const { createClient } = supabase;
           userProfile = profile;
           document.getElementById('nav-user-balance').innerText = `Ví: ${formatVND(profile.balance)}`;
           balanceWrapper.classList.remove('d-none');
+          
+          // Sync Drawer
+          if (drawerUserBalance) drawerUserBalance.innerText = `Ví: ${formatVND(profile.balance)}`;
+          if (drawerBalanceWrapper) drawerBalanceWrapper.classList.remove('d-none');
         }
       } else {
         authBtn.innerText = 'Đăng Nhập';
         authBtn.onclick = () => location.href = '/login';
         balanceWrapper.classList.add('d-none');
+        
+        // Sync Drawer
+        if (drawerAuthBtn) {
+          drawerAuthBtn.innerText = 'Đăng Nhập';
+          drawerAuthBtn.onclick = () => location.href = '/login';
+        }
+        if (drawerBalanceWrapper) drawerBalanceWrapper.classList.add('d-none');
       }
     }
 

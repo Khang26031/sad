@@ -655,9 +655,35 @@ body {
   .hero p {
     font-size: 0.95rem;
   }
+  .hamburger-menu {
+    display: block !important;
+  }
+  .nav-links {
+    display: none !important;
+  }
   .products-grid {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+  .product-card .product-img {
+    height: 120px !important;
+  }
+  .product-content {
+    padding: 0.75rem !important;
+  }
+  .product-title {
+    font-size: 0.95rem !important;
+  }
+  .product-price {
+    font-size: 0.95rem !important;
+  }
+  .stock-badge {
+    font-size: 0.65rem !important;
+    padding: 0.15rem 0.3rem !important;
+  }
+  .product-footer .btn {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 0.75rem !important;
   }
   .quick-deposit-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -722,4 +748,74 @@ body {
 @keyframes toastSlideOut {
   from { transform: translateX(120%); opacity: 1; }
   to { transform: translateX(120%); opacity: 0; }
+}
+
+/* Hamburger Menu & Sliding Drawer */
+.hamburger-menu {
+  display: none;
+  font-size: 1.6rem;
+  cursor: pointer;
+  color: #fff;
+  transition: opacity 0.3s;
+}
+
+.hamburger-menu:hover {
+  opacity: 0.8;
+}
+
+.nav-drawer {
+  position: fixed;
+  top: 0;
+  left: -100%;
+  width: 75%;
+  max-width: 280px;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid var(--border-color);
+  box-shadow: 10px 0 40px rgba(0, 0, 0, 0.6);
+  z-index: 10000;
+  transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-drawer.open {
+  left: 0;
+}
+
+.drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.drawer-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.05rem;
+  display: block;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.drawer-link:hover, .drawer-link.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
 }
