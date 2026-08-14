@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/check-payment",
-      "destination": "/api/check_payment.py"
+      "destination": "/api/check_payment"
     }
   ]
 }

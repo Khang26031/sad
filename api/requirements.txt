@@ -1,7 +1,7 @@
-Pillow==12.3.0
-requests==2.34.2
-aiohttp==3.14.3
-mb-capcha-ocr==0.1.6
-pydantic==2.13.4
-cryptography==49.0.0
-supabase==2.4.0
+Pillow
+requests
+aiohttp
+mb-capcha-ocr
+pydantic
+cryptography
+supabase
