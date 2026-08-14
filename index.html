@@ -12,30 +12,43 @@
   <div class="navbar">
     <div class="logo" onclick="location.href='/'">🛒 SHOPBANHANG</div>
     <ul class="nav-links">
-      <li><a href="/" class="nav-link active">Cửa Hàng</a></li>
-      <li><a href="#orders-lookup" class="nav-link">Tra Cứu Đơn Hàng</a></li>
+      <li><a href="/" class="nav-link active" id="nav-shop-link">Cửa Hàng</a></li>
+      <li><a href="#orders-lookup" class="nav-link" id="nav-lookup-link">Tra Cứu Đơn Hàng</a></li>
+      <li><a href="#purchase-history" class="nav-link d-none" id="nav-history-link">Lịch Sử Mua Hàng</a></li>
       <li><a href="/login" class="nav-link" id="nav-auth-btn">Đăng Nhập</a></li>
     </ul>
   </div>
 
-  <!-- Hero Section -->
-  <div class="hero">
-    <h1>Cửa Hàng <span>Key & Tài Khoản</span> Tự Động</h1>
-    <p>Giao dịch tự động, nhận key lập tức sau khi thanh toán thành công. Hỗ trợ thanh toán VietQR ngân hàng cực kỳ tiện lợi.</p>
+  <!-- Main Store Section -->
+  <div id="store-section">
+    <!-- Hero Section -->
+    <div class="hero">
+      <h1>Cửa Hàng <span>Key & Tài Khoản</span> Tự Động</h1>
+      <p>Giao dịch tự động, nhận key lập tức sau khi thanh toán thành công. Hỗ trợ thanh toán VietQR ngân hàng cực kỳ tiện lợi.</p>
+    </div>
+
+    <!-- Categories Filter -->
+    <div class="categories-filter" id="categories-container">
+      <button class="cat-btn active" data-category="all">Tất cả sản phẩm</button>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="products-grid" id="products-container">
+      <div class="loading-spinner" style="grid-column: 1/-1;"></div>
+    </div>
   </div>
 
-  <!-- Categories Filter -->
-  <div class="categories-filter" id="categories-container">
-    <button class="cat-btn active" data-category="all">Tất cả sản phẩm</button>
+  <!-- Purchase History Section (Logged-in users) -->
+  <div id="history-section" class="d-none" style="max-width: 800px; margin: 3rem auto; padding: 0 1.5rem;">
+    <h2 style="font-family: var(--font-display); font-size: 2rem; font-weight: 800; margin-bottom: 1.5rem; text-align: center;">Lịch Sử Mua Hàng Của Bạn</h2>
+    <div class="glass-panel" style="padding: 1.5rem; border-radius: 16px;">
+      <div id="history-list">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
   </div>
 
-  <!-- Products Grid -->
-  <div class="products-grid" id="products-container">
-    <!-- Loading spinner -->
-    <div class="loading-spinner" style="grid-column: 1/-1;"></div>
-  </div>
-
-  <!-- Tra cứu đơn hàng -->
+  <!-- Tra cứu đơn hàng (Guests) -->
   <div id="orders-lookup" class="glass-panel" style="max-width: 600px; margin: 4rem auto; padding: 2rem; border-radius: 16px;">
     <h3 style="font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; text-align: center;">Tra Cứu Đơn Hàng Đã Mua</h3>
     <p style="color: var(--text-secondary); text-align: center; font-size: 0.9rem; margin-bottom: 1.5rem;">Nhập Email hoặc Mã đơn hàng (Transaction Ref) để xem lại key đã mua.</p>

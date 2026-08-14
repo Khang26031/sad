@@ -20,9 +20,17 @@ const submitEmailBtn = document.getElementById('submit-email-btn');
 const lookupBtn = document.getElementById('lookup-btn');
 const finishBtn = document.getElementById('finish-btn');
 
+const navShopLink = document.getElementById('nav-shop-link');
+const navLookupLink = document.getElementById('nav-lookup-link');
+const navHistoryLink = document.getElementById('nav-history-link');
+const storeSection = document.getElementById('store-section');
+const historySection = document.getElementById('history-section');
+const historyList = document.getElementById('history-list');
+
 // Load Data
 async function initShop() {
   await checkAuthSession();
+  setupNavigation();
   await loadCategories();
   await loadProducts();
 }
@@ -31,28 +39,154 @@ async function checkAuthSession() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   const authBtn = document.getElementById('nav-auth-btn');
   if (session) {
-    authBtn.innerText = 'Bảng Điều Khiển';
-    // Check role to redirect to admin or profile dashboard
+    authBtn.innerText = 'Đăng Xuất';
+    navHistoryLink.classList.remove('d-none');
+    
+    // Bind click to log out
     authBtn.onclick = async (e) => {
       e.preventDefault();
-      const { data: profile } = await supabaseClient
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single();
-      if (profile && profile.role === 'admin') {
-        location.href = '/admin';
-      } else {
-        // user logout for simple app
-        await supabaseClient.auth.signOut();
-        location.reload();
-      }
+      await supabaseClient.auth.signOut();
+      location.reload();
     };
+    
+    // Fetch and load purchase history
+    await loadPurchaseHistory(session.user.id);
   } else {
     authBtn.innerText = 'Đăng Nhập';
     authBtn.onclick = () => location.href = '/login';
+    navHistoryLink.classList.add('d-none');
   }
 }
+
+// Client tabs navigation
+function setupNavigation() {
+  navShopLink.onclick = (e) => {
+    e.preventDefault();
+    navShopLink.classList.add('active');
+    navHistoryLink.classList.remove('active');
+    storeSection.classList.remove('d-none');
+    historySection.classList.add('d-none');
+  };
+
+  navHistoryLink.onclick = (e) => {
+    e.preventDefault();
+    navHistoryLink.classList.add('active');
+    navShopLink.classList.remove('active');
+    storeSection.classList.add('d-none');
+    historySection.classList.remove('d-none');
+  };
+}
+
+async function loadPurchaseHistory(userId) {
+  historyList.innerHTML = '<div class="loading-spinner"></div>';
+  try {
+    const { data: orders, error } = await supabaseClient
+      .from('orders')
+      .select('*, products(name)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (!orders || orders.length === 0) {
+      historyList.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">Bạn chưa mua sản phẩm nào.</p>';
+      return;
+    }
+
+    let html = '';
+    orders.forEach(o => {
+      const dateStr = new Date(o.created_at).toLocaleString('vi-VN');
+      const isCompleted = o.status === 'completed';
+      
+      html += `
+        <div class="glass-panel" style="padding: 1.25rem; margin-bottom: 1rem; border-color: ${isCompleted ? 'var(--success)' : 'var(--border-color)'};">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-weight: 700; font-size: 1.1rem;">${o.products?.name || 'Sản phẩm đã xóa'}</span>
+            <span class="badge badge-${o.status}">${o.status.toUpperCase()}</span>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+            <div>Mã giao dịch: <strong>${o.tx_ref}</strong></div>
+            <div>Giá tiền: <strong>${formatVND(o.amount)}</strong></div>
+            <div>Thời gian mua: ${dateStr}</div>
+          </div>
+          ${isCompleted ? `
+            <div style="background: var(--bg-primary); padding: 0.75rem; border-radius: 6px; font-family: monospace; font-size: 1rem; word-break: break-all; color: var(--text-primary); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+              <span id="hist-key-${o.id}">${o.key_content}</span>
+              <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="copyText('hist-key-${o.id}')">Copy</button>
+            </div>
+          ` : `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <p style="font-size: 0.85rem; color: var(--warning); margin: 0;">Đang chờ thanh toán.</p>
+              <button class="btn btn-primary" style="padding: 0.4rem 1rem; font-size: 0.8rem;" onclick="openPaymentForExistingOrder('${o.id}')">
+                Thanh Toán Ngay
+              </button>
+            </div>
+          `}
+        </div>
+      `;
+    });
+    historyList.innerHTML = html;
+  } catch (err) {
+    historyList.innerHTML = `<p style="color: var(--danger); text-align: center;">Lỗi tải lịch sử: ${err.message}</p>`;
+  }
+}
+
+// Open Payment modal for existing order (e.g. from history tab)
+window.openPaymentForExistingOrder = async function(orderId) {
+  try {
+    const { data: order, error } = await supabaseClient
+      .from('orders')
+      .select('*, products(name)')
+      .eq('id', orderId)
+      .single();
+
+    if (error) throw error;
+
+    document.getElementById('modal-product-title').innerText = `Thanh toán: ${order.products?.name || 'Sản phẩm'}`;
+    
+    // 1. Fetch system bank settings
+    const { data: bankSettingsRes } = await supabaseClient
+      .from('settings')
+      .select('value')
+      .eq('key', 'bank_settings')
+      .single();
+    
+    const bankVal = bankSettingsRes?.value || {
+      bank_name: "MBBank",
+      account_number: "123456789",
+      account_name: "NGUYEN VAN A",
+      qr_template: "https://api.vietqr.io/image/970422-{account_number}-compact2.jpg?amount={amount}&addInfo={memo}&accountName={account_name}"
+    };
+
+    // 2. Fill Payment Instructions
+    document.getElementById('pay-bank').innerText = bankVal.bank_name;
+    document.getElementById('pay-account').innerText = bankVal.account_number;
+    document.getElementById('pay-name').innerText = bankVal.account_name;
+    document.getElementById('pay-amount').innerText = formatVND(order.amount);
+    document.getElementById('pay-memo').innerText = order.tx_ref;
+
+    // 3. Generate VietQR Link
+    let qrUrl = bankVal.qr_template
+      .replace('{account_number}', bankVal.account_number)
+      .replace('{amount}', order.amount)
+      .replace('{memo}', order.tx_ref)
+      .replace('{account_name}', encodeURIComponent(bankVal.account_name));
+    
+    document.getElementById('payment-qr').src = qrUrl;
+
+    // Switch Modal View Directly to Step 2 (skip email)
+    stepEmail.classList.add('d-none');
+    stepPayment.classList.remove('d-none');
+    stepSuccess.classList.add('d-none');
+    purchaseModal.classList.add('open');
+
+    // 4. Start Polling backend transaction checker
+    startPolling(order.id);
+
+  } catch (err) {
+    alert(`Lỗi mở thanh toán đơn hàng: ${err.message || err}`);
+  }
+};
 
 async function loadCategories() {
   const { data: categories, error } = await supabaseClient
@@ -160,6 +294,13 @@ window.openPurchaseModal = function(productId) {
   document.getElementById('modal-product-title').innerText = `Mua: ${selectedProduct.name}`;
   document.getElementById('modal-product-price').innerText = formatVND(selectedProduct.price);
   
+  // Set default email value if user is logged in
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session && session.user.email) {
+      document.getElementById('buyer-email').value = session.user.email;
+    }
+  });
+
   // Reset stages
   stepEmail.classList.remove('d-none');
   stepPayment.classList.add('d-none');
@@ -171,6 +312,10 @@ window.openPurchaseModal = function(productId) {
 modalCloseBtn.onclick = () => {
   purchaseModal.classList.remove('open');
   if (orderPollingInterval) clearInterval(orderPollingInterval);
+  // Auto refresh history if user logged in
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) loadPurchaseHistory(session.user.id);
+  });
 };
 
 submitEmailBtn.onclick = async () => {
@@ -330,6 +475,10 @@ function startPolling(orderId) {
 
 finishBtn.onclick = () => {
   purchaseModal.classList.remove('open');
+  // Auto refresh history if user logged in
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) loadPurchaseHistory(session.user.id);
+  });
 };
 
 // Tra cứu đơn hàng
@@ -351,12 +500,10 @@ lookupBtn.onclick = async () => {
     let orders = [];
     
     if (val.toUpperCase().startsWith('SHOP')) {
-      // Gọi RPC tra cứu bằng mã đơn hàng (cho phép cả khách vãng lai)
       const { data, error } = await supabaseClient.rpc('get_order_by_tx_ref', { p_tx_ref: val });
       if (error) throw error;
       orders = data || [];
     } else {
-      // Gọi RPC tra cứu bằng email (yêu cầu đăng nhập chính chủ)
       const { data, error } = await supabaseClient.rpc('get_orders_by_email', { p_email: val });
       if (error) throw error;
       orders = data || [];
