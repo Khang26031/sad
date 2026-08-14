@@ -25,7 +25,8 @@ window.showToast = function(message, type = 'info') {
   setTimeout(closeToast, 4000);
   container.appendChild(card);
 };
-\n// app.js for LEGION STORE
+
+// app.js for LEGION STORE
 const { createClient } = supabase;
 const supabaseClient = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
 
