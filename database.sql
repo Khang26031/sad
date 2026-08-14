@@ -2,7 +2,6 @@
 -- Hãy copy toàn bộ nội dung file này và chạy trong mục SQL Editor trên Supabase Dashboard.
 
 -- ================= CLEAN UP OLD POLICIES =================
--- Việc này giúp tránh lỗi trùng lặp chính sách khi bạn chạy lại file SQL nhiều lần
 DROP POLICY IF EXISTS "Cho phép người dùng đọc thông tin của chính mình" ON public.profiles;
 DROP POLICY IF EXISTS "Cho phép người dùng cập nhật thông tin của chính mình" ON public.profiles;
 DROP POLICY IF EXISTS "Admin có toàn quyền trên profiles" ON public.profiles;
@@ -160,15 +159,18 @@ CREATE TABLE IF NOT EXISTS public.orders (
 
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 
+-- Cập nhật RLS Orders: Xóa bỏ kiểm tra đệ quy tx_ref trên cùng bảng
 CREATE POLICY "Người dùng xem đơn hàng của mình" ON public.orders
     FOR SELECT USING (
         auth.uid() = user_id OR 
-        buyer_email = (SELECT email FROM public.profiles WHERE id = auth.uid()) OR
-        tx_ref = (SELECT tx_ref FROM public.orders WHERE id = orders.id)
+        buyer_email = (SELECT email FROM public.profiles WHERE id = auth.uid())
     );
 
 CREATE POLICY "Admin quản lý mọi đơn hàng" ON public.orders
     FOR ALL USING (public.is_admin(auth.uid()));
+
+CREATE POLICY "Cho phép tạo đơn hàng mới" ON public.orders
+    FOR INSERT WITH CHECK (TRUE);
 
 
 -- 7. DATABASE FUNCTION BÁN KEY BẢO MẬT (RPC)
@@ -211,7 +213,63 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 
--- 8. THÊM DỮ LIỆU CẤU HÌNH MẪU BAN ĐẦU
+-- 8. DATABASE FUNCTIONS CHO PHÉP TRA CỨU ĐƠN HÀNG AN TOÀN (TRÁNH LẶP VÔ HẠN RLS)
+-- Cho phép khách vãng lai tra cứu đơn hàng bằng Mã đơn hàng duy nhất (chứa key bảo mật)
+CREATE OR REPLACE FUNCTION public.get_order_by_tx_ref(p_tx_ref TEXT)
+RETURNS TABLE (
+    id UUID,
+    user_id UUID,
+    buyer_email TEXT,
+    product_id UUID,
+    amount NUMERIC,
+    status TEXT,
+    tx_ref TEXT,
+    key_content TEXT,
+    created_at TIMESTAMP WITH TIME ZONE,
+    product_name TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        o.id, o.user_id, o.buyer_email, o.product_id, o.amount, o.status, o.tx_ref, o.key_content, o.created_at,
+        p.name AS product_name
+    FROM public.orders o
+    LEFT JOIN public.products p ON o.product_id = p.id
+    WHERE o.tx_ref = p_tx_ref;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Cho phép người dùng tra cứu đơn hàng bằng Email (yêu cầu đăng nhập chính chủ hoặc quyền Admin)
+CREATE OR REPLACE FUNCTION public.get_orders_by_email(p_email TEXT)
+RETURNS TABLE (
+    id UUID,
+    user_id UUID,
+    buyer_email TEXT,
+    product_id UUID,
+    amount NUMERIC,
+    status TEXT,
+    tx_ref TEXT,
+    key_content TEXT,
+    created_at TIMESTAMP WITH TIME ZONE,
+    product_name TEXT
+) AS $$
+BEGIN
+    IF auth.jwt() ->> 'email' = p_email OR public.is_admin(auth.uid()) THEN
+        RETURN QUERY
+        SELECT 
+            o.id, o.user_id, o.buyer_email, o.product_id, o.amount, o.status, o.tx_ref, o.key_content, o.created_at,
+            p.name AS product_name
+        FROM public.orders o
+        LEFT JOIN public.products p ON o.product_id = p.id
+        WHERE o.buyer_email = p_email;
+    ELSE
+        RAISE EXCEPTION 'Bạn cần đăng nhập bằng chính tài khoản email này để tra cứu.';
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
+-- 9. THÊM DỮ LIỆU CẤU HÌNH MẪU BAN ĐẦU
 INSERT INTO public.settings (key, value) VALUES
 ('bank_settings', '{
     "bank_name": "MBBank",

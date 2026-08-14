@@ -310,19 +310,21 @@ lookupBtn.onclick = async () => {
   resultsDiv.style.display = 'block';
 
   try {
-    let query = supabaseClient.from('orders').select('*, products(name)');
+    let orders = [];
     
     if (val.toUpperCase().startsWith('SHOP')) {
-      query = query.eq('tx_ref', val);
+      // Gọi RPC tra cứu bằng mã đơn hàng (cho phép cả khách vãng lai)
+      const { data, error } = await supabaseClient.rpc('get_order_by_tx_ref', { p_tx_ref: val });
+      if (error) throw error;
+      orders = data || [];
     } else {
-      query = query.eq('buyer_email', val);
+      // Gọi RPC tra cứu bằng email (yêu cầu đăng nhập chính chủ)
+      const { data, error } = await supabaseClient.rpc('get_orders_by_email', { p_email: val });
+      if (error) throw error;
+      orders = data || [];
     }
 
-    const { data: orders, error } = await query.order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    if (!orders || orders.length === 0) {
+    if (orders.length === 0) {
       resultsDiv.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">Không tìm thấy đơn hàng nào.</p>';
       return;
     }
@@ -335,7 +337,7 @@ lookupBtn.onclick = async () => {
       html += `
         <div class="glass-panel" style="padding: 1rem; margin-bottom: 1rem; border-color: ${isCompleted ? 'var(--success)' : 'var(--border-color)'};">
           <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-            <span style="font-weight: 700;">${o.products?.name || 'Sản phẩm đã xóa'}</span>
+            <span style="font-weight: 700;">${o.product_name || 'Sản phẩm đã xóa'}</span>
             <span class="badge badge-${o.status}">${o.status.toUpperCase()}</span>
           </div>
           <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
