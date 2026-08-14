@@ -137,7 +137,8 @@ window.showToast = function(message, type = 'info') {
   setTimeout(closeToast, 4000);
   container.appendChild(card);
 };
-\nconst { createClient } = supabase;
+
+const { createClient } = supabase;
     const supabaseClient = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
 
     const tabLoginBtn = document.getElementById('tab-login-btn');
