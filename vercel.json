@@ -4,6 +4,14 @@
     {
       "source": "/api/check-payment",
       "destination": "/api/check_payment"
+    },
+    {
+      "source": "/api/check-deposit",
+      "destination": "/api/check_deposit"
+    },
+    {
+      "source": "/san-pham/:slug",
+      "destination": "/product.html"
     }
   ]
 }

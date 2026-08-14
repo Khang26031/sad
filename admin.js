@@ -1,143 +1,149 @@
-// admin.js
+// admin.js for LEGION STORE
 const { createClient } = supabase;
 const supabaseClient = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
 
-let activeAdminSession = null;
-let productsList = [];
+let categories = [];
+let editProductId = null;
+let currentTab = 'products';
 
-// Init Admin Dashboard
-async function initAdmin() {
+// Check Auth & Role
+async function checkAdminAuth() {
   const { data: { session } } = await supabaseClient.auth.getSession();
-  
   if (!session) {
-    alert('Bạn cần đăng nhập để truy cập trang quản trị.');
     location.href = '/login';
     return;
   }
 
-  // Check role is admin
-  const { data: profile } = await supabaseClient
+  const { data: profile, error } = await supabaseClient
     .from('profiles')
-    .select('*')
+    .select('role')
     .eq('id', session.user.id)
     .single();
 
-  if (!profile || profile.role !== 'admin') {
-    alert('Bạn không có quyền truy cập trang quản trị.');
+  if (error || !profile || profile.role !== 'admin') {
+    alert('Truy cập bị từ chối. Bạn không phải là Admin.');
     location.href = '/';
-    return;
+  } else {
+    initAdminPanel();
   }
-
-  activeAdminSession = session;
-  document.getElementById('admin-user-email').innerText = `Admin: ${session.user.email}`;
-
-  setupSidebar();
-  setupProductModal();
-  setupSettingsTab();
-  
-  // Load Default Tab
-  loadDashboardData();
 }
 
-// Sidebar Navigation
-function setupSidebar() {
-  const menuItems = document.querySelectorAll('.admin-menu-item');
-  const sections = document.querySelectorAll('.admin-tab-section');
-
-  menuItems.forEach(item => {
-    item.addEventListener('click', () => {
-      menuItems.forEach(i => i.classList.remove('active'));
-      sections.forEach(s => s.classList.add('d-none'));
-
-      item.classList.add('active');
-      const targetTab = item.getAttribute('data-tab');
-      document.getElementById(targetTab).classList.remove('d-none');
-
-      // Load correct data based on tab selected
-      if (targetTab === 'tab-dashboard') loadDashboardData();
-      else if (targetTab === 'tab-products') loadProductsData();
-      else if (targetTab === 'tab-keys') loadKeysData();
-      else if (targetTab === 'tab-orders') loadOrdersData();
-      else if (targetTab === 'tab-settings') loadSettingsData();
-    });
-  });
-
-  document.getElementById('admin-logout-btn').onclick = async () => {
-    await supabaseClient.auth.signOut();
-    location.href = '/login';
+// Initialize Panel
+function initAdminPanel() {
+  setupSidebar();
+  loadAllData();
+  
+  // Bind form submissions
+  document.getElementById('product-form').onsubmit = handleProductSubmit;
+  document.getElementById('btn-create-category').onclick = handleCategoryCreate;
+  document.getElementById('btn-add-keys').onclick = handleAddKeys;
+  document.getElementById('bank-settings-form').onsubmit = handleBankSettingsSubmit;
+  document.getElementById('btn-adjust-balance').onclick = handleAdjustBalance;
+  document.getElementById('btn-admin-submit-complete').onclick = handleAdminSubmitManualOrder;
+  document.getElementById('btn-cancel-edit').onclick = resetProductForm;
+  
+  // Auto slug generator on title change
+  document.getElementById('prod-name').oninput = function() {
+    if (!editProductId) {
+      document.getElementById('prod-slug').value = slugify(this.value);
+    }
   };
 }
 
-// FORMAT UTIL
-function formatVND(amount) {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-}
-
-// ================= DASHBOARD DATA =================
-async function loadDashboardData() {
-  // Load stats
-  const { data: completedOrders } = await supabaseClient
-    .from('orders')
-    .select('amount')
-    .eq('status', 'completed');
+// Tabs Switching
+function setupSidebar() {
+  const tabs = ['products', 'orders-auto', 'orders-manual', 'deposits', 'customers', 'bank'];
   
-  const revenue = completedOrders ? completedOrders.reduce((sum, o) => sum + parseFloat(o.amount), 0) : 0;
-  const completedCount = completedOrders ? completedOrders.length : 0;
-
-  document.getElementById('stat-revenue').innerText = formatVND(revenue);
-  document.getElementById('stat-orders-completed').innerText = completedCount;
-
-  // Products count
-  const { count: prodCount } = await supabaseClient
-    .from('products')
-    .select('*', { count: 'exact', head: true });
-  document.getElementById('stat-products-count').innerText = prodCount || 0;
-
-  // Unsold keys count
-  const { count: keysCount } = await supabaseClient
-    .from('items')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_sold', false);
-  document.getElementById('stat-keys-unsold').innerText = keysCount || 0;
-
-  // Load 10 recent orders
-  const { data: recentOrders } = await supabaseClient
-    .from('orders')
-    .select('*, products(name)')
-    .order('created_at', { ascending: false })
-    .limit(10);
-
-  const tbody = document.getElementById('recent-orders-table');
-  tbody.innerHTML = '';
-
-  if (!recentOrders || recentOrders.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Chưa có đơn hàng nào.</td></tr>';
-    return;
-  }
-
-  recentOrders.forEach(o => {
-    const dateStr = new Date(o.created_at).toLocaleString('vi-VN');
-    tbody.innerHTML += `
-      <tr>
-        <td><strong>${o.tx_ref}</strong></td>
-        <td>${o.buyer_email}</td>
-        <td>${o.products?.name || 'Đã xóa'}</td>
-        <td>${formatVND(o.amount)}</td>
-        <td><span class="badge badge-${o.status}">${o.status.toUpperCase()}</span></td>
-        <td>${dateStr}</td>
-      </tr>
-    `;
+  tabs.forEach(tab => {
+    document.getElementById(`menu-${tab}`).onclick = () => {
+      tabs.forEach(t => {
+        document.getElementById(`menu-${t}`).classList.remove('active');
+        document.getElementById(`sec-${t}`).classList.add('d-none');
+      });
+      document.getElementById(`menu-${tab}`).classList.add('active');
+      document.getElementById(`sec-${tab}`).classList.remove('d-none');
+      currentTab = tab;
+      loadTabSpecificData(tab);
+    };
   });
 }
 
-// ================= PRODUCTS TAB =================
-async function loadProductsData() {
-  const { data: products } = await supabaseClient
-    .from('products')
+function loadAllData() {
+  loadCategories();
+  loadTabSpecificData(currentTab);
+}
+
+function loadTabSpecificData(tab) {
+  if (tab === 'products') {
+    loadProductsList();
+  } else if (tab === 'orders-auto') {
+    loadAutoOrders();
+  } else if (tab === 'orders-manual') {
+    loadManualOrders();
+  } else if (tab === 'deposits') {
+    loadDepositsList();
+  } else if (tab === 'customers') {
+    loadCustomersList();
+  } else if (tab === 'bank') {
+    loadBankSettings();
+  }
+}
+
+// Categories Management
+async function loadCategories() {
+  const catSelect = document.getElementById('prod-category');
+  const keyCatSelect = document.getElementById('key-prod-select');
+  catSelect.innerHTML = '';
+  
+  const { data, error } = await supabaseClient
+    .from('categories')
     .select('*')
+    .order('name');
+
+  if (error) return;
+  categories = data;
+
+  categories.forEach(cat => {
+    catSelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+  });
+}
+
+async function handleCategoryCreate() {
+  const catInput = document.getElementById('cat-name-input');
+  const name = catInput.value.trim();
+  if (!name) return;
+
+  const { error } = await supabaseClient
+    .from('categories')
+    .insert({ name });
+
+  if (error) {
+    alert('Lỗi tạo danh mục: ' + error.message);
+  } else {
+    alert('Tạo danh mục thành công!');
+    catInput.value = '';
+    loadCategories();
+  }
+}
+
+// Product add/edit
+async function loadProductsList() {
+  const tbody = document.getElementById('tbl-products-body');
+  const keySelect = document.getElementById('key-prod-select');
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Đang tải...</td></tr>';
+  keySelect.innerHTML = '';
+
+  const { data: products, error } = await supabaseClient
+    .from('products')
+    .select('*, categories(name)')
     .order('created_at', { ascending: false });
 
-  // Get items stock count
+  if (error) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--danger);">Lỗi tải sản phẩm.</td></tr>';
+    return;
+  }
+
+  // Count items unsold for auto products
   const { data: items } = await supabaseClient
     .from('items')
     .select('product_id')
@@ -145,24 +151,30 @@ async function loadProductsData() {
 
   const stockMap = {};
   if (items) {
-    items.forEach(it => {
-      stockMap[it.product_id] = (stockMap[it.product_id] || 0) + 1;
+    items.forEach(item => {
+      stockMap[item.product_id] = (stockMap[item.product_id] || 0) + 1;
     });
   }
 
-  productsList = products || [];
-  const tbody = document.getElementById('products-table');
   tbody.innerHTML = '';
+  products.forEach(p => {
+    const isAuto = p.product_type === 'auto';
+    const stock = isAuto ? (stockMap[p.id] || 0) : (p.manual_stock || 0);
+    
+    if (isAuto) {
+      keySelect.innerHTML += `<option value="${p.id}">${p.name} (Còn lại: ${stock} key)</option>`;
+    }
 
-  productsList.forEach(p => {
-    const stock = stockMap[p.id] || 0;
     tbody.innerHTML += `
       <tr>
-        <td><strong>${p.name}</strong></td>
+        <td><img src="${p.image_url || ''}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px;"></td>
+        <td><strong>${p.name}</strong><br><small style="color:var(--text-secondary);">Slug: ${p.slug}</small></td>
+        <td>${p.categories?.name || '-'}</td>
         <td>${formatVND(p.price)}</td>
-        <td><span class="stock-badge ${stock === 0 ? 'empty' : ''}">${stock} key còn lại</span></td>
+        <td><span class="badge ${isAuto ? 'badge-completed' : 'badge-pending'}">${isAuto ? 'Auto' : 'Manual'}</span></td>
+        <td><span class="stock-badge ${stock === 0 ? 'empty' : ''}">${stock === 0 ? 'Hết hàng' : `Còn lại: ${stock}`}</span></td>
         <td><span class="badge ${p.status === 'active' ? 'badge-completed' : 'badge-failed'}">${p.status}</span></td>
-        <td>
+        <td class="action-btn-group">
           <button class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="editProduct('${p.id}')">Sửa</button>
           <button class="btn btn-danger" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="deleteProduct('${p.id}')">Xóa</button>
         </td>
@@ -171,242 +183,449 @@ async function loadProductsData() {
   });
 }
 
-function setupProductModal() {
-  const modal = document.getElementById('product-modal');
-  const closeBtn = document.getElementById('product-modal-close');
-  const addBtn = document.getElementById('add-product-btn');
-  const form = document.getElementById('product-form');
+async function handleProductSubmit(e) {
+  e.preventDefault();
+  const name = document.getElementById('prod-name').value.trim();
+  const slug = document.getElementById('prod-slug').value.trim();
+  const categoryId = document.getElementById('prod-category').value;
+  const price = document.getElementById('prod-price').value;
+  const imageUrl = document.getElementById('prod-image').value.trim();
+  const type = document.getElementById('prod-type').value;
+  const manualStock = document.getElementById('prod-manual-stock').value;
+  const status = document.getElementById('prod-status').value;
+  const desc = document.getElementById('prod-desc').value.trim();
+  
+  // Format custom fields
+  const fieldsRaw = document.getElementById('prod-fields').value.trim();
+  const fields = fieldsRaw ? fieldsRaw.split(',').map(f => f.trim()).filter(f => f) : [];
 
-  addBtn.onclick = () => {
-    document.getElementById('p-id').value = '';
-    form.reset();
-    document.getElementById('product-modal-title').innerText = 'Thêm Sản Phẩm Mới';
-    modal.classList.add('open');
+  const payload = {
+    name,
+    slug,
+    category_id: categoryId,
+    price: parseFloat(price),
+    image_url: imageUrl || null,
+    product_type: type,
+    manual_stock: parseInt(manualStock) || 0,
+    status,
+    form_fields: fields,
+    description: desc || null
   };
 
-  closeBtn.onclick = () => modal.classList.remove('open');
-
-  form.onsubmit = async (e) => {
-    e.preventDefault();
-    const id = document.getElementById('p-id').value;
-    const name = document.getElementById('p-name').value;
-    const desc = document.getElementById('p-desc').value;
-    const price = parseFloat(document.getElementById('p-price').value);
-    const imageUrl = document.getElementById('p-image').value;
-    const status = document.getElementById('p-status').value;
-
-    const payload = { name, description: desc, price, image_url: imageUrl, status };
-
-    try {
-      if (id) {
-        // Edit Product
-        const { error } = await supabaseClient.from('products').update(payload).eq('id', id);
-        if (error) throw error;
-      } else {
-        // Add Product
-        const { error } = await supabaseClient.from('products').insert(payload);
-        if (error) throw error;
-      }
-      modal.classList.remove('open');
-      loadProductsData();
-    } catch (err) {
-      alert(`Lỗi lưu sản phẩm: ${err.message}`);
+  try {
+    if (editProductId) {
+      const { error } = await supabaseClient
+        .from('products')
+        .update(payload)
+        .eq('id', editProductId);
+      if (error) throw error;
+      alert('Cập nhật sản phẩm thành công!');
+    } else {
+      const { error } = await supabaseClient
+        .from('products')
+        .insert(payload);
+      if (error) throw error;
+      alert('Đăng sản phẩm mới thành công!');
     }
-  };
+
+    resetProductForm();
+    loadProductsList();
+  } catch (err) {
+    alert('Lỗi lưu sản phẩm: ' + err.message);
+  }
 }
 
-window.editProduct = function(id) {
-  const p = productsList.find(prod => prod.id === id);
-  if (!p) return;
+window.editProduct = async function(id) {
+  const { data: p, error } = await supabaseClient
+    .from('products')
+    .select('*')
+    .eq('id', id)
+    .single();
 
-  document.getElementById('p-id').value = p.id;
-  document.getElementById('p-name').value = p.name;
-  document.getElementById('p-desc').value = p.description || '';
-  document.getElementById('p-price').value = p.price;
-  document.getElementById('p-image').value = p.image_url || '';
-  document.getElementById('p-status').value = p.status;
+  if (error || !p) return;
 
-  document.getElementById('product-modal-title').innerText = 'Chỉnh Sửa Sản Phẩm';
-  document.getElementById('product-modal').classList.add('open');
+  editProductId = p.id;
+  document.getElementById('product-form-title').innerText = 'Chỉnh Sửa Sản Phẩm';
+  document.getElementById('prod-id').value = p.id;
+  document.getElementById('prod-name').value = p.name;
+  document.getElementById('prod-slug').value = p.slug;
+  document.getElementById('prod-category').value = p.category_id;
+  document.getElementById('prod-price').value = p.price;
+  document.getElementById('prod-image').value = p.image_url || '';
+  document.getElementById('prod-type').value = p.product_type;
+  document.getElementById('prod-manual-stock').value = p.manual_stock;
+  document.getElementById('prod-status').value = p.status;
+  document.getElementById('prod-fields').value = p.form_fields ? p.form_fields.join(', ') : '';
+  document.getElementById('prod-desc').value = p.description || '';
+
+  document.getElementById('btn-cancel-edit').classList.remove('d-none');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 };
+
+function resetProductForm() {
+  editProductId = null;
+  document.getElementById('product-form-title').innerText = 'Đăng Sản Phẩm Mới';
+  document.getElementById('product-form').reset();
+  document.getElementById('btn-cancel-edit').classList.add('d-none');
+}
 
 window.deleteProduct = async function(id) {
-  if (!confirm('Bạn có chắc chắn muốn xóa sản phẩm này? Tất cả key liên quan cũng sẽ bị xóa.')) return;
-  try {
-    const { error } = await supabaseClient.from('products').delete().eq('id', id);
-    if (error) throw error;
-    loadProductsData();
-  } catch (err) {
-    alert(`Lỗi xóa sản phẩm: ${err.message}`);
-  }
+  if (!confirm('Bạn chắc chắn muốn xóa sản phẩm này? Tất cả các key liên quan trong kho cũng sẽ bị xóa.')) return;
+  const { error } = await supabaseClient.from('products').delete().eq('id', id);
+  if (error) alert('Lỗi xóa sản phẩm: ' + error.message);
+  else loadProductsList();
 };
 
-// ================= KEYS TAB =================
-async function loadKeysData() {
-  const { data: products } = await supabaseClient.from('products').select('*').eq('status', 'active');
-  const select = document.getElementById('key-product-select');
-  select.innerHTML = '';
+// Add keys to stock
+async function handleAddKeys() {
+  const productId = document.getElementById('key-prod-select').value;
+  const keysText = document.getElementById('keys-input').value.trim();
   
-  if (products) {
-    products.forEach(p => {
-      select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
-    });
+  if (!productId || !keysText) {
+    alert('Vui lòng chọn sản phẩm và nhập key.');
+    return;
   }
 
-  // Fetch stocks breakdown stats
-  const { data: itemsStats } = await supabaseClient.from('items').select('product_id, is_sold');
-  const { data: productsAll } = await supabaseClient.from('products').select('id, name');
+  const keys = keysText.split('\n').map(k => k.trim()).filter(k => k);
+  const rows = keys.map(k => ({ product_id: productId, content: k, is_sold: false }));
 
-  const prodStats = {};
-  if (productsAll) {
-    productsAll.forEach(p => {
-      prodStats[p.id] = { name: p.name, unsold: 0, sold: 0 };
-    });
+  const btn = document.getElementById('btn-add-keys');
+  btn.disabled = true;
+  btn.innerText = 'Đang nạp key...';
+
+  const { error } = await supabaseClient.from('items').insert(rows);
+  btn.disabled = false;
+  btn.innerText = 'Thêm Key Vào Kho';
+
+  if (error) {
+    alert('Lỗi nạp key: ' + error.message);
+  } else {
+    alert(`Nạp thành công ${rows.length} key vào kho!`);
+    document.getElementById('keys-input').value = '';
+    loadProductsList();
   }
-
-  if (itemsStats) {
-    itemsStats.forEach(it => {
-      if (prodStats[it.product_id]) {
-        if (it.is_sold) prodStats[it.product_id].sold++;
-        else prodStats[it.product_id].unsold++;
-      }
-    });
-  }
-
-  const tbody = document.getElementById('keys-stats-table');
-  tbody.innerHTML = '';
-
-  Object.values(prodStats).forEach(st => {
-    tbody.innerHTML += `
-      <tr>
-        <td><strong>${st.name}</strong></td>
-        <td style="color: var(--success);">${st.unsold} key chưa bán</td>
-        <td style="color: var(--text-secondary);">${st.sold} key đã bán</td>
-        <td><strong>${st.unsold + st.sold}</strong></td>
-      </tr>
-    `;
-  });
 }
 
-document.getElementById('import-keys-btn').onclick = async () => {
-  const productId = document.getElementById('key-product-select').value;
-  const keysText = document.getElementById('keys-input').value.trim();
+// Tab 2: Auto Orders
+async function loadAutoOrders() {
+  const tbody = document.getElementById('tbl-orders-auto-body');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Đang tải...</td></tr>';
 
-  if (!productId) {
-    alert('Vui lòng chọn sản phẩm.');
-    return;
-  }
-  if (!keysText) {
-    alert('Vui lòng nhập danh sách key.');
-    return;
-  }
-
-  const lines = keysText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  const itemsToInsert = lines.map(content => ({
-    product_id: productId,
-    content: content,
-    is_sold: false
-  }));
-
-  try {
-    const { error } = await supabaseClient.from('items').insert(itemsToInsert);
-    if (error) throw error;
-
-    alert(`Đã nhập thành công ${itemsToInsert.length} key vào kho!`);
-    document.getElementById('keys-input').value = '';
-    loadKeysData();
-  } catch (err) {
-    alert(`Lỗi nhập key: ${err.message}`);
-  }
-};
-
-// ================= ORDERS TAB =================
-async function loadOrdersData() {
-  const { data: orders } = await supabaseClient
+  const { data: orders, error } = await supabaseClient
     .from('orders')
-    .select('*, products(name)')
+    .select('*, products(name, product_type)')
     .order('created_at', { ascending: false });
 
-  const tbody = document.getElementById('all-orders-table');
-  tbody.innerHTML = '';
-
-  if (!orders || orders.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center">Chưa có đơn hàng nào.</td></tr>';
+  if (error) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger);">Lỗi tải đơn hàng.</td></tr>';
     return;
   }
 
-  orders.forEach(o => {
+  // Filter auto orders
+  const autoOrders = orders.filter(o => o.products?.product_type === 'auto');
+
+  tbody.innerHTML = '';
+  autoOrders.forEach(o => {
     const dateStr = new Date(o.created_at).toLocaleString('vi-VN');
     tbody.innerHTML += `
       <tr>
         <td><strong>${o.tx_ref}</strong></td>
         <td>${o.buyer_email}</td>
-        <td>${o.products?.name || 'Đã xóa'}</td>
+        <td>${o.products?.name || 'Sản phẩm đã xóa'}</td>
         <td>${formatVND(o.amount)}</td>
-        <td><span class="badge badge-${o.status}">${o.status.toUpperCase()}</span></td>
-        <td><code style="font-family: monospace; font-size: 0.85rem; word-break: break-all;">${o.key_content || '-'}</code></td>
+        <td><span class="badge badge-${o.status}">${o.status}</span></td>
+        <td><code style="font-family:monospace;font-size:0.8rem;word-break:break-all;">${o.key_content || '-'}</code></td>
         <td>${dateStr}</td>
       </tr>
     `;
   });
 }
 
-// ================= SETTINGS TAB =================
-async function loadSettingsData() {
-  const { data: settings } = await supabaseClient
-    .from('settings')
-    .select('*')
-    .eq('key', 'bank_settings')
-    .single();
+// Tab 3: Manual Orders cày thuê
+async function loadManualOrders() {
+  const tbody = document.getElementById('tbl-orders-manual-body');
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Đang tải...</td></tr>';
 
-  if (settings && settings.value) {
-    const val = settings.value;
-    document.getElementById('cfg-bank-name').value = val.bank_name || 'MBBank';
-    document.getElementById('cfg-bank-account').value = val.account_number || '';
-    document.getElementById('cfg-bank-name-owner').value = val.account_name || '';
+  const { data: orders, error } = await supabaseClient
+    .from('orders')
+    .select('*, products(name, product_type)')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--danger);">Lỗi tải đơn hàng.</td></tr>';
+    return;
+  }
+
+  const manualOrders = orders.filter(o => o.products?.product_type === 'manual');
+
+  tbody.innerHTML = '';
+  manualOrders.forEach(o => {
+    const dateStr = new Date(o.created_at).toLocaleString('vi-VN');
+    const isProcessing = o.status === 'processing';
     
-    document.getElementById('cfg-mb-username').value = val.mb_username || '';
-    document.getElementById('cfg-mb-password').value = val.mb_password || '';
+    // Format custom inputs
+    let inputsHtml = '';
+    if (o.customer_inputs && o.customer_inputs.length > 0) {
+      o.customer_inputs.forEach(inp => {
+        inputsHtml += `<div><strong>${inp.name}</strong>: <code>${inp.value}</code></div>`;
+      });
+    }
+
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${o.tx_ref}</strong></td>
+        <td>${o.buyer_email}</td>
+        <td>${o.products?.name || 'Sản phẩm đã xóa'}</td>
+        <td>${formatVND(o.amount)}</td>
+        <td style="font-size: 0.8rem; line-height: 1.4;">${inputsHtml || '-'}</td>
+        <td><span class="badge badge-${o.status}">${o.status}</span></td>
+        <td><code style="font-family:monospace;font-size:0.8rem;word-break:break-all;">${o.key_content || '-'}</code></td>
+        <td>
+          ${isProcessing ? `
+            <button class="btn btn-success" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="openAdminOrderModal('${o.id}')">Hoàn Thành Đơn</button>
+          ` : '-'}
+        </td>
+      </tr>
+    `;
+  });
+}
+
+// Complete manual cày thuê order modal
+const adminOrderModal = document.getElementById('admin-order-modal');
+
+window.openAdminOrderModal = function(orderId) {
+  document.getElementById('admin-modal-order-id').value = orderId;
+  document.getElementById('admin-modal-key-content').value = '';
+  adminOrderModal.classList.add('open');
+};
+
+window.closeAdminOrderModal = function() {
+  adminOrderModal.classList.remove('open');
+};
+
+async function handleAdminSubmitManualOrder() {
+  const orderId = document.getElementById('admin-modal-order-id').value;
+  const keyContent = document.getElementById('admin-modal-key-content').value.trim();
+
+  if (!keyContent) {
+    alert('Vui lòng nhập kết quả key/tài khoản bàn giao.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-admin-submit-complete');
+  btn.disabled = true;
+  btn.innerText = 'Đang lưu kết quả...';
+
+  try {
+    // Call Supabase RPC admin_complete_manual_order
+    const { data, error } = await supabaseClient.rpc('admin_complete_manual_order', {
+      p_order_id: orderId,
+      p_key_content: keyContent
+    });
+
+    if (error) throw error;
+    
+    alert('Cập nhật trạng thái và hoàn tất đơn cày thuê thành công!');
+    closeAdminOrderModal();
+    loadManualOrders();
+  } catch (err) {
+    alert('Lỗi cập nhật đơn hàng: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Xác Nhận & Gửi';
   }
 }
 
-function setupSettingsTab() {
-  document.getElementById('save-settings-btn').onclick = async () => {
-    const bankName = document.getElementById('cfg-bank-name').value.trim();
-    const bankAccount = document.getElementById('cfg-bank-account').value.trim();
-    const bankNameOwner = document.getElementById('cfg-bank-name-owner').value.trim();
-    const mbUser = document.getElementById('cfg-mb-username').value.trim();
-    const mbPass = document.getElementById('cfg-mb-password').value.trim();
+// Tab 4: Deposits (Nạp Tiền)
+async function loadDepositsList() {
+  const tbody = document.getElementById('tbl-deposits-body');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Đang tải...</td></tr>';
 
-    if (!bankAccount || !bankNameOwner) {
-      alert('Vui lòng điền đầy đủ số tài khoản và tên chủ tài khoản nhận tiền.');
-      return;
-    }
+  const { data: deposits, error } = await supabaseClient
+    .from('deposits')
+    .select('*, profiles(email)')
+    .order('created_at', { ascending: false });
 
-    const valuePayload = {
-      bank_name: bankName,
-      account_number: bankAccount,
-      account_name: bankNameOwner,
-      mb_username: mbUser,
-      mb_password: mbPass,
-      qr_template: "https://api.vietqr.io/image/970422-{account_number}-compact2.jpg?amount={amount}&addInfo={memo}&accountName={account_name}"
-    };
+  if (error) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--danger);">Lỗi tải hóa đơn nạp.</td></tr>';
+    return;
+  }
 
-    try {
-      const { error } = await supabaseClient
-        .from('settings')
-        .upsert({
-          key: 'bank_settings',
-          value: valuePayload,
-          updated_at: new Date()
-        });
-
-      if (error) throw error;
-      alert('Đã lưu cài đặt hệ thống thành công!');
-    } catch (err) {
-      alert(`Lỗi lưu cài đặt: ${err.message}`);
-    }
-  };
+  tbody.innerHTML = '';
+  deposits.forEach(d => {
+    const dateStr = new Date(d.created_at).toLocaleString('vi-VN');
+    const isPending = d.status === 'pending';
+    
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${d.tx_ref}</strong></td>
+        <td>${d.profiles?.email || 'Người dùng đã xóa'}</td>
+        <td>${formatVND(d.amount)}</td>
+        <td><span class="badge badge-${d.status}">${d.status}</span></td>
+        <td>${dateStr}</td>
+        <td class="action-btn-group">
+          ${isPending ? `
+            <button class="btn btn-success" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="approveDeposit('${d.id}')">Duyệt Nạp</button>
+          ` : ''}
+          <button class="btn btn-danger" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="deleteDeposit('${d.id}')">Xóa</button>
+        </td>
+      </tr>
+    `;
+  });
 }
 
-initAdmin();
+window.approveDeposit = async function(id) {
+  if (!confirm('Bạn chắc chắn muốn duyệt hóa đơn nạp tiền này thủ công? Hệ thống sẽ cộng tiền cho người dùng.')) return;
+  const { data, error } = await supabaseClient.rpc('process_deposit', { p_deposit_id: id });
+  if (error) alert('Lỗi duyệt nạp tiền: ' + error.message);
+  else loadDepositsList();
+};
+
+window.deleteDeposit = async function(id) {
+  if (!confirm('Bạn chắc chắn muốn xóa hóa đơn nạp này?')) return;
+  const { error } = await supabaseClient.from('deposits').delete().eq('id', id);
+  if (error) alert('Lỗi xóa hóa đơn: ' + error.message);
+  else loadDepositsList();
+};
+
+// Tab 5: Customers
+async function loadCustomersList() {
+  const tbody = document.getElementById('tbl-customers-body');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Đang tải...</td></tr>';
+
+  const { data: customers, error } = await supabaseClient
+    .from('profiles')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--danger);">Lỗi tải người dùng.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  customers.forEach(c => {
+    const dateStr = new Date(c.created_at).toLocaleString('vi-VN');
+    tbody.innerHTML += `
+      <tr>
+        <td><code style="font-size:0.8rem;">${c.id}</code></td>
+        <td><strong>${c.email}</strong></td>
+        <td><span class="badge ${c.role === 'admin' ? 'badge-completed' : 'badge-pending'}">${c.role}</span></td>
+        <td><strong style="color:var(--success);">${formatVND(c.balance)}</strong></td>
+        <td>${dateStr}</td>
+        <td class="action-btn-group">
+          <button class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="copyCustId('${c.id}')">Chọn Nạp</button>
+          <button class="btn btn-danger" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="deleteCustomer('${c.id}')">Xóa</button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+window.copyCustId = function(id) {
+  document.getElementById('cust-id-input').value = id;
+  document.getElementById('cust-amount-input').focus();
+};
+
+async function handleAdjustBalance() {
+  const userId = document.getElementById('cust-id-input').value.trim();
+  const amountStr = document.getElementById('cust-amount-input').value;
+  const amount = parseFloat(amountStr);
+
+  if (!userId || isNaN(amount)) {
+    alert('Vui lòng nhập UUID khách hàng và số tiền hợp lệ.');
+    return;
+  }
+
+  try {
+    const { data, error } = await supabaseClient.rpc('admin_adjust_balance', {
+      p_user_id: userId,
+      p_amount: amount
+    });
+
+    if (error) throw error;
+
+    alert('Cập nhật ví khách hàng thành công! Số dư mới: ' + formatVND(data));
+    document.getElementById('cust-id-input').value = '';
+    document.getElementById('cust-amount-input').value = '';
+    loadCustomersList();
+  } catch (err) {
+    alert('Lỗi cập nhật ví: ' + err.message);
+  }
+}
+
+window.deleteCustomer = async function(id) {
+  if (!confirm('Bạn chắc chắn muốn xóa tài khoản khách hàng này ra khỏi bảng profiles?')) return;
+  const { error } = await supabaseClient.from('profiles').delete().eq('id', id);
+  if (error) alert('Lỗi xóa khách hàng: ' + error.message);
+  else loadCustomersList();
+};
+
+// Tab 6: Bank settings
+async function loadBankSettings() {
+  const { data: bankSettingsRes } = await supabaseClient
+    .from('settings')
+    .select('value')
+    .eq('key', 'bank_settings')
+    .single();
+
+  if (bankSettingsRes && bankSettingsRes.value) {
+    const v = bankSettingsRes.value;
+    document.getElementById('cfg-bank-name').value = v.bank_name || '';
+    document.getElementById('cfg-bank-account').value = v.account_number || '';
+    document.getElementById('cfg-bank-name-owner').value = v.account_name || '';
+    document.getElementById('cfg-mb-username').value = v.mb_username || '';
+    document.getElementById('cfg-mb-password').value = v.mb_password || '';
+  }
+}
+
+async function handleBankSettingsSubmit(e) {
+  e.preventDefault();
+  const bankName = document.getElementById('cfg-bank-name').value.trim();
+  const bankAccount = document.getElementById('cfg-bank-account').value.trim();
+  const bankNameOwner = document.getElementById('cfg-bank-name-owner').value.trim();
+  const mbUser = document.getElementById('cfg-mb-username').value.trim();
+  const mbPass = document.getElementById('cfg-mb-password').value.trim();
+
+  const valuePayload = {
+    bank_name: bankName,
+    account_number: bankAccount,
+    account_name: bankNameOwner,
+    mb_username: mbUser,
+    mb_password: mbPass,
+    qr_template: "https://api.vietqr.io/image/970422-{account_number}-compact2.jpg?amount={amount}&addInfo={memo}&accountName={account_name}"
+  };
+
+  const { error } = await supabaseClient
+    .from('settings')
+    .upsert({
+      key: 'bank_settings',
+      value: valuePayload,
+      updated_at: new Date()
+    });
+
+  if (error) {
+    alert('Lỗi lưu cấu hình bank: ' + error.message);
+  } else {
+    alert('Cập nhật cấu hình tài khoản nhận tiền thành công!');
+    loadBankSettings();
+  }
+}
+
+// Helpers
+function formatVND(amount) {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+}
+
+function slugify(text) {
+  return text.toString().toLowerCase().trim()
+    .normalize('NFD') // separate accent marks
+    .replace(/[\u0300-\u036f]/g, '') // remove accent marks
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'd')
+    .replace(/[^a-z0-9 -]/g, '') // remove non-alphanumeric chars
+    .replace(/\s+/g, '-') // replace spaces with -
+    .replace(/-+/g, '-'); // collapse multiple -
+}
+
+checkAdminAuth();

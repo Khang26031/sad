@@ -3,62 +3,128 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cửa Hàng Bán Key & Tài Khoản Tự Động</title>
+  <title>LEGION STORE - Shop Key & Tài Khoản Tự Động</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 
   <!-- Navbar -->
   <div class="navbar">
-    <div class="logo" onclick="location.href='/'">🛒 SHOPBANHANG</div>
+    <div class="logo" onclick="location.href='/'">LEGION STORE</div>
     <ul class="nav-links">
       <li><a href="/" class="nav-link active" id="nav-shop-link">Cửa Hàng</a></li>
-      <li><a href="#orders-lookup" class="nav-link" id="nav-lookup-link">Tra Cứu Đơn Hàng</a></li>
+      <li><a href="#deposit" class="nav-link d-none" id="nav-deposit-link">Nạp Tiền</a></li>
       <li><a href="#purchase-history" class="nav-link d-none" id="nav-history-link">Lịch Sử Mua Hàng</a></li>
+      <li id="nav-balance-wrapper" class="d-none">
+        <div id="nav-user-balance" style="font-weight: 700; color: var(--success); padding: 0.5rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">Ví: 0đ</div>
+      </li>
       <li><a href="/login" class="nav-link" id="nav-auth-btn">Đăng Nhập</a></li>
     </ul>
   </div>
 
-  <!-- Main Store Section -->
-  <div id="store-section">
-    <!-- Hero Section -->
-    <div class="hero">
-      <h1>Cửa Hàng <span>Key & Tài Khoản</span> Tự Động</h1>
-      <p>Giao dịch tự động, nhận key lập tức sau khi thanh toán thành công. Hỗ trợ thanh toán VietQR ngân hàng cực kỳ tiện lợi.</p>
-    </div>
+  <div class="container">
+    
+    <!-- Main Store Section -->
+    <div id="store-section">
+      <!-- Hero Section -->
+      <div class="hero">
+        <h1>LEGION <span style="background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">STORE</span></h1>
+        <p>Hệ thống bán Key & Tài khoản Premium tự động giá rẻ. Thanh toán số dư tiện lợi, hỗ trợ cày thuê và nâng cấp dịch vụ theo yêu cầu.</p>
+      </div>
 
-    <!-- Categories Filter -->
-    <div class="categories-filter" id="categories-container">
-      <button class="cat-btn active" data-category="all">Tất cả sản phẩm</button>
-    </div>
+      <!-- Categories Filter -->
+      <div class="categories-filter" id="categories-container">
+        <button class="cat-btn active" data-category="all">Tất cả sản phẩm</button>
+      </div>
 
-    <!-- Products Grid -->
-    <div class="products-grid" id="products-container">
-      <div class="loading-spinner" style="grid-column: 1/-1;"></div>
-    </div>
-  </div>
-
-  <!-- Purchase History Section (Logged-in users) -->
-  <div id="history-section" class="d-none" style="max-width: 800px; margin: 3rem auto; padding: 0 1.5rem;">
-    <h2 style="font-family: var(--font-display); font-size: 2rem; font-weight: 800; margin-bottom: 1.5rem; text-align: center;">Lịch Sử Mua Hàng Của Bạn</h2>
-    <div class="glass-panel" style="padding: 1.5rem; border-radius: 16px;">
-      <div id="history-list">
-        <div class="loading-spinner"></div>
+      <!-- Products Grid -->
+      <div class="products-grid" id="products-container">
+        <div class="loading-spinner" style="grid-column: 1/-1;"></div>
       </div>
     </div>
-  </div>
 
-  <!-- Tra cứu đơn hàng (Guests) -->
-  <div id="orders-lookup" class="glass-panel" style="max-width: 600px; margin: 4rem auto; padding: 2rem; border-radius: 16px;">
-    <h3 style="font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; text-align: center;">Tra Cứu Đơn Hàng Đã Mua</h3>
-    <p style="color: var(--text-secondary); text-align: center; font-size: 0.9rem; margin-bottom: 1.5rem;">Nhập Email hoặc Mã đơn hàng (Transaction Ref) để xem lại key đã mua.</p>
-    <div class="form-group" style="display: flex; gap: 0.5rem; margin-bottom: 0;">
-      <input type="text" id="lookup-input" class="form-control" placeholder="Nhập Email hoặc Mã đơn hàng (ví dụ: SHOP1723...)" required>
-      <button id="lookup-btn" class="btn btn-primary" style="padding: 0 1.5rem;">Tìm kiếm</button>
+    <!-- Deposit Section (Only for Logged-in Users) -->
+    <div id="deposit-section" class="d-none" style="max-width: 600px; margin: 3rem auto;">
+      <h2 style="font-family: var(--font-display); font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; text-align: center;">Nạp Tiền Vào Tài Khoản</h2>
+      <p style="color: var(--text-secondary); text-align: center; font-size: 0.95rem; margin-bottom: 2rem;">Hệ thống quét MBBank cộng số dư tự động trong 1-2 phút.</p>
+      
+      <div class="glass-panel" style="padding: 2rem; border-radius: 20px;">
+        
+        <!-- Step 1: Input Amount -->
+        <div id="dep-step-input">
+          <div class="form-group">
+            <label class="form-label">Chọn số tiền nạp nhanh</label>
+            <div class="quick-deposit-grid">
+              <button class="quick-amt-btn" onclick="setDepositAmount(50000)">50k</button>
+              <button class="quick-amt-btn" onclick="setDepositAmount(100000)">100k</button>
+              <button class="quick-amt-btn" onclick="setDepositAmount(200000)">200k</button>
+              <button class="quick-amt-btn" onclick="setDepositAmount(500000)">500k</button>
+              <button class="quick-amt-btn" onclick="setDepositAmount(1000000)">1M</button>
+              <button class="quick-amt-btn active" onclick="setDepositAmount(10000)">Khác (Min 10k)</button>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Số tiền muốn nạp (đơn vị: VNĐ)</label>
+            <input type="number" id="deposit-amount-input" class="form-control" placeholder="10000" min="10000" value="10000">
+          </div>
+
+          <button id="btn-confirm-deposit-init" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.75rem;">
+            Xác Nhận Nạp Tiền
+          </button>
+        </div>
+
+        <!-- Step 2: Show QR & Payment Instructions -->
+        <div id="dep-step-pay" class="d-none payment-flow">
+          <p style="color: var(--warning); font-size: 0.9rem; font-weight: 500;">Vui lòng chuyển khoản đúng số tiền và nội dung bên dưới để được cộng tiền tự động.</p>
+          
+          <img src="" id="deposit-qr-img" class="qr-code-img" alt="Mã QR Nạp Tiền">
+
+          <div class="payment-details">
+            <div class="payment-row">
+              <span class="payment-label">Ngân Hàng:</span>
+              <span class="payment-val" id="dep-bank-name">MBBank</span>
+            </div>
+            <div class="payment-row">
+              <span class="payment-label">Số Tài Khoản:</span>
+              <span class="payment-val copyable" id="dep-acct-num" onclick="copyText('dep-acct-num')">000999988889</span>
+            </div>
+            <div class="payment-row">
+              <span class="payment-label">Tên Tài Khoản:</span>
+              <span class="payment-val" id="dep-acct-name">NGUYEN GIA KHANG</span>
+            </div>
+            <div class="payment-row">
+              <span class="payment-label">Số Tiền Nạp:</span>
+              <span class="payment-val copyable" id="dep-pay-amount" style="color: var(--accent-secondary);" onclick="copyText('dep-pay-amount')">10.000đ</span>
+            </div>
+            <div class="payment-row" style="background: rgba(245, 158, 11, 0.1); padding: 0.4rem 0.6rem; border-radius: 6px; margin-top: 0.25rem;">
+              <span class="payment-label" style="color: var(--warning);">Nội dung (Memo):</span>
+              <span class="payment-val copyable" id="dep-pay-memo" style="color: var(--warning); font-family: monospace; font-size: 1.05rem;" onclick="copyText('dep-pay-memo')">NAP123456</span>
+            </div>
+          </div>
+
+          <div class="loading-spinner"></div>
+          <p style="color: var(--text-secondary); font-size: 0.85rem;" id="deposit-status-text">Đang chờ quét giao dịch từ ngân hàng...</p>
+
+          <div style="display: flex; gap: 0.75rem; width: 100%; margin-top: 1rem;">
+            <button id="btn-cancel-deposit" class="btn btn-danger" style="flex: 1; justify-content: center; padding: 0.75rem;">Hủy Nạp</button>
+            <button id="btn-check-deposit-now" class="btn btn-success" style="flex: 1.5; justify-content: center; padding: 0.75rem;">Tôi Đã Chuyển Khoản</button>
+          </div>
+        </div>
+
+      </div>
     </div>
-    <div id="lookup-results" class="mt-4" style="display: none;">
-      <!-- Results populated by JS -->
+
+    <!-- Purchase History Section (Logged-in users) -->
+    <div id="history-section" class="d-none" style="max-width: 800px; margin: 3rem auto;">
+      <h2 style="font-family: var(--font-display); font-size: 2rem; font-weight: 800; margin-bottom: 1.5rem; text-align: center;">Lịch Sử Mua Hàng Của Bạn</h2>
+      <div class="glass-panel" style="padding: 1.5rem; border-radius: 16px;">
+        <div id="history-list">
+          <div class="loading-spinner"></div>
+        </div>
+      </div>
     </div>
+
   </div>
 
   <!-- Purchase Modal -->
@@ -70,78 +136,60 @@
       </div>
       
       <div class="modal-body">
-        <!-- Step 1: Input Email -->
-        <div id="step-email">
-          <p style="color: var(--text-secondary); margin-bottom: 1rem;">Vui lòng nhập Email của bạn để nhận key sau khi thanh toán.</p>
-          <div class="form-group">
-            <label class="form-label">Địa chỉ Email</label>
-            <input type="email" id="buyer-email" class="form-control" placeholder="email@cua-ban.com" required>
+        <!-- Form Fields and Balance Payment -->
+        <div id="modal-checkout-stage">
+          <div id="product-custom-fields-container">
+            <!-- Dynamic fields populated by JS -->
           </div>
-          <div class="payment-row mb-4">
-            <span class="payment-label">Đơn giá:</span>
-            <span class="payment-val" id="modal-product-price" style="font-size: 1.1rem; color: var(--accent-secondary);">0đ</span>
-          </div>
-          <button id="submit-email-btn" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.75rem;">
-            Tiến Hành Thanh Toán
-          </button>
-        </div>
-
-        <!-- Step 2: Payment QR & Instruction -->
-        <div id="step-payment" class="d-none payment-flow">
-          <p style="color: var(--warning); font-size: 0.9rem; font-weight: 500;">Vui lòng quét mã QR chuyển khoản đúng số tiền và nội dung bên dưới.</p>
           
-          <img src="" id="payment-qr" class="qr-code-img" alt="Mã QR Chuyển Khoản">
-
-          <div class="payment-details">
+          <div class="payment-details mt-4">
             <div class="payment-row">
-              <span class="payment-label">Ngân Hàng:</span>
-              <span class="payment-val" id="pay-bank">MBBank</span>
+              <span class="payment-label">Giá bán sản phẩm:</span>
+              <span class="payment-val" id="checkout-product-price" style="color: var(--accent-secondary); font-size: 1.1rem;">0đ</span>
             </div>
             <div class="payment-row">
-              <span class="payment-label">Số Tài Khoản:</span>
-              <span class="payment-val copyable" id="pay-account" onclick="copyText('pay-account')">123456789</span>
-            </div>
-            <div class="payment-row">
-              <span class="payment-label">Tên Tài Khoản:</span>
-              <span class="payment-val" id="pay-name">NGUYEN VAN A</span>
-            </div>
-            <div class="payment-row">
-              <span class="payment-label">Số Tiền:</span>
-              <span class="payment-val copyable" id="pay-amount" onclick="copyText('pay-amount')">0đ</span>
-            </div>
-            <div class="payment-row" style="background: rgba(245, 158, 11, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px; margin-top: 0.25rem;">
-              <span class="payment-label" style="color: var(--warning);">Nội dung (Memo):</span>
-              <span class="payment-val copyable" id="pay-memo" style="color: var(--warning);" onclick="copyText('pay-memo')">SHOP123</span>
+              <span class="payment-label">Số dư hiện tại của bạn:</span>
+              <span class="payment-val" id="checkout-user-balance">0đ</span>
             </div>
           </div>
 
-          <div class="loading-spinner"></div>
-          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem;" id="payment-status-text">Đang chờ bạn quét mã thanh toán...</p>
-          
-          <button id="btn-confirm-payment" class="btn btn-success" style="width: 100%; justify-content: center; padding: 0.75rem; margin-top: 1rem;">
-            Tôi Đã Chuyển Khoản
-          </button>
-          
-          <div id="payment-manual-tip" class="d-none" style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-secondary); border-top: 1px dashed var(--border-color); padding-top: 1rem; width: 100%;">
-            Nếu đã chuyển khoản thành công nhưng hệ thống chưa xác nhận, vui lòng chụp màn hình bill và gửi cho Admin kèm Mã đơn hàng để được duyệt key thủ công!
+          <div id="checkout-balance-warning" class="d-none" style="color: var(--danger); font-size: 0.85rem; font-weight: 600; margin: 1rem 0; padding: 0.5rem; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 6px; background: rgba(239, 68, 68, 0.05); text-align: center;">
+            Số dư của bạn không đủ! Vui lòng nạp thêm tiền.
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem; width: 100%;">
+            <button id="btn-redirect-deposit" class="btn btn-primary d-none" style="flex: 1; justify-content: center; padding: 0.75rem;">
+              Nạp Tiền Ngay
+            </button>
+            <button id="btn-pay-balance" class="btn btn-success" style="flex: 1; justify-content: center; padding: 0.75rem;">
+              Thanh Toán Bằng Số Dư
+            </button>
           </div>
         </div>
 
-        <!-- Step 3: Success & Key Delivery -->
-        <div id="step-success" class="d-none">
-          <div class="key-delivery-box">
-            <div class="key-title">🎉 ĐÃ GIAO DỊCH THÀNH CÔNG!</div>
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">Cảm ơn bạn đã mua hàng. Dưới đây là thông tin key/tài khoản của bạn:</p>
-            <div class="key-content-display" id="delivered-key">KEY-1234-ABCD-XYZ</div>
-            <button class="btn btn-primary" onclick="copyText('delivered-key')" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Sao Chép Key</button>
+        <!-- Success Screen -->
+        <div id="modal-success-stage" class="d-none">
+          <div style="text-align: center; padding: 1.5rem 0;">
+            <div style="color: var(--success); font-size: 3.5rem; margin-bottom: 0.5rem;">✔</div>
+            <h4 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;" id="checkout-success-title">MUA HÀNG THÀNH CÔNG!</h4>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;" id="checkout-success-msg">Đơn hàng của bạn đã được ghi nhận. Vui lòng bấm vào nút dưới để xem key hoặc theo dõi tiến trình.</p>
+            <button id="btn-go-to-history" class="btn btn-success" style="width: 100%; justify-content: center; padding: 0.75rem;">
+              Xem Lịch Sử Mua Hàng
+            </button>
           </div>
-          <button id="finish-btn" class="btn" style="width: 100%; justify-content: center; margin-top: 1rem;">Đóng</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Supabase CDN -->
+  <!-- Floating Zalo Contact Button -->
+  <a href="https://zalo.me/0349255864" target="_blank" class="zalo-float-btn" title="Hỗ trợ Zalo: 0349255864">
+    <svg class="zalo-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12.002 2C6.48 2 2 5.926 2 10.774c0 2.5 1.205 4.747 3.127 6.275l-.892 3.267a.75.75 0 0 0 1.077.838l3.968-2.18c.866.242 1.776.374 2.722.374 5.522 0 10.002-3.926 10.002-8.774C22.004 5.926 17.524 2 12.002 2zm3.328 12.44h-5.06l5.06-5.83v-.86H9.722v1.25h4.634l-5.06 5.83v.86h6.034v-1.25z"/>
+    </svg>
+  </a>
+
+  <!-- Supabase Script -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/config.js"></script>
   <script src="/app.js"></script>

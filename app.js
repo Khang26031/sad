@@ -1,10 +1,13 @@
-// app.js
+// app.js for LEGION STORE
 const { createClient } = supabase;
 const supabaseClient = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
 
 let allProducts = [];
 let selectedProduct = null;
 let orderPollingInterval = null;
+let depositPollingInterval = null;
+let userProfile = null;
+let authSession = null;
 
 // UI References
 const productsContainer = document.getElementById('products-container');
@@ -12,22 +15,26 @@ const categoriesContainer = document.getElementById('categories-container');
 const purchaseModal = document.getElementById('purchase-modal');
 const modalCloseBtn = document.getElementById('modal-close-btn');
 
-const stepEmail = document.getElementById('step-email');
-const stepPayment = document.getElementById('step-payment');
-const stepSuccess = document.getElementById('step-success');
+const checkoutStage = document.getElementById('modal-checkout-stage');
+const successStage = document.getElementById('modal-success-stage');
+const fieldsContainer = document.getElementById('product-custom-fields-container');
+const payBalanceBtn = document.getElementById('btn-pay-balance');
+const redirectDepBtn = document.getElementById('btn-redirect-deposit');
+const balanceWarning = document.getElementById('checkout-balance-warning');
 
-const submitEmailBtn = document.getElementById('submit-email-btn');
-const lookupBtn = document.getElementById('lookup-btn');
-const finishBtn = document.getElementById('finish-btn');
-
+// Navigation Tabs
 const navShopLink = document.getElementById('nav-shop-link');
-const navLookupLink = document.getElementById('nav-lookup-link');
+const navDepositLink = document.getElementById('nav-deposit-link');
 const navHistoryLink = document.getElementById('nav-history-link');
+const navBalanceWrapper = document.getElementById('nav-balance-wrapper');
+const navUserBalance = document.getElementById('nav-user-balance');
+
 const storeSection = document.getElementById('store-section');
+const depositSection = document.getElementById('deposit-section');
 const historySection = document.getElementById('history-section');
 const historyList = document.getElementById('history-list');
 
-// Load Data
+// Init SPA
 async function initShop() {
   await checkAuthSession();
   setupNavigation();
@@ -37,9 +44,12 @@ async function initShop() {
 
 async function checkAuthSession() {
   const { data: { session } } = await supabaseClient.auth.getSession();
+  authSession = session;
   const authBtn = document.getElementById('nav-auth-btn');
+  
   if (session) {
     authBtn.innerText = 'Đăng Xuất';
+    navDepositLink.classList.remove('d-none');
     navHistoryLink.classList.remove('d-none');
     
     // Bind click to log out
@@ -49,145 +59,66 @@ async function checkAuthSession() {
       location.reload();
     };
     
-    // Fetch and load purchase history
-    await loadPurchaseHistory(session.user.id);
+    // Get user profile balance
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+
+    if (profile) {
+      userProfile = profile;
+      navUserBalance.innerText = `Ví: ${formatVND(profile.balance)}`;
+      navBalanceWrapper.classList.remove('d-none');
+    }
   } else {
     authBtn.innerText = 'Đăng Nhập';
     authBtn.onclick = () => location.href = '/login';
+    navDepositLink.classList.add('d-none');
     navHistoryLink.classList.add('d-none');
+    navBalanceWrapper.classList.add('d-none');
   }
 }
 
-// Client tabs navigation
+// Navigation flow
 function setupNavigation() {
+  const activateTab = (tabLink, sectionToShow) => {
+    [navShopLink, navDepositLink, navHistoryLink].forEach(link => link.classList.remove('active'));
+    [storeSection, depositSection, historySection].forEach(sec => sec.classList.add('d-none'));
+    
+    tabLink.classList.add('active');
+    sectionToShow.classList.remove('d-none');
+  };
+
   navShopLink.onclick = (e) => {
     e.preventDefault();
-    navShopLink.classList.add('active');
-    navHistoryLink.classList.remove('active');
-    storeSection.classList.remove('d-none');
-    historySection.classList.add('d-none');
+    activateTab(navShopLink, storeSection);
+  };
+
+  navDepositLink.onclick = (e) => {
+    e.preventDefault();
+    activateTab(navDepositLink, depositSection);
+    // Reset Deposit view to Step 1
+    document.getElementById('dep-step-input').classList.remove('d-none');
+    document.getElementById('dep-step-pay').classList.add('d-none');
+    if (depositPollingInterval) clearInterval(depositPollingInterval);
   };
 
   navHistoryLink.onclick = (e) => {
     e.preventDefault();
-    navHistoryLink.classList.add('active');
-    navShopLink.classList.remove('active');
-    storeSection.classList.add('d-none');
-    historySection.classList.remove('d-none');
+    activateTab(navHistoryLink, historySection);
+    if (authSession) loadPurchaseHistory(authSession.user.id);
   };
-}
 
-async function loadPurchaseHistory(userId) {
-  historyList.innerHTML = '<div class="loading-spinner"></div>';
-  try {
-    const { data: orders, error } = await supabaseClient
-      .from('orders')
-      .select('*, products(name)')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    if (!orders || orders.length === 0) {
-      historyList.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">Bạn chưa mua sản phẩm nào.</p>';
-      return;
-    }
-
-    let html = '';
-    orders.forEach(o => {
-      const dateStr = new Date(o.created_at).toLocaleString('vi-VN');
-      const isCompleted = o.status === 'completed';
-      
-      html += `
-        <div class="glass-panel" style="padding: 1.25rem; margin-bottom: 1rem; border-color: ${isCompleted ? 'var(--success)' : 'var(--border-color)'};">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <span style="font-weight: 700; font-size: 1.1rem;">${o.products?.name || 'Sản phẩm đã xóa'}</span>
-            <span class="badge badge-${o.status}">${o.status.toUpperCase()}</span>
-          </div>
-          <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-            <div>Mã giao dịch: <strong>${o.tx_ref}</strong></div>
-            <div>Giá tiền: <strong>${formatVND(o.amount)}</strong></div>
-            <div>Thời gian mua: ${dateStr}</div>
-          </div>
-          ${isCompleted ? `
-            <div style="background: var(--bg-primary); padding: 0.75rem; border-radius: 6px; font-family: monospace; font-size: 1rem; word-break: break-all; color: var(--text-primary); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-              <span id="hist-key-${o.id}">${o.key_content}</span>
-              <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="copyText('hist-key-${o.id}')">Copy</button>
-            </div>
-          ` : `
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <p style="font-size: 0.85rem; color: var(--warning); margin: 0;">Đang chờ thanh toán.</p>
-              <button class="btn btn-primary" style="padding: 0.4rem 1rem; font-size: 0.8rem;" onclick="openPaymentForExistingOrder('${o.id}')">
-                Thanh Toán Ngay
-              </button>
-            </div>
-          `}
-        </div>
-      `;
-    });
-    historyList.innerHTML = html;
-  } catch (err) {
-    historyList.innerHTML = `<p style="color: var(--danger); text-align: center;">Lỗi tải lịch sử: ${err.message}</p>`;
+  // Handle SPA routing hashtags
+  if (location.hash === '#deposit') {
+    navDepositLink.click();
+  } else if (location.hash === '#purchase-history') {
+    navHistoryLink.click();
   }
 }
 
-// Open Payment modal for existing order (e.g. from history tab)
-window.openPaymentForExistingOrder = async function(orderId) {
-  try {
-    const { data: order, error } = await supabaseClient
-      .from('orders')
-      .select('*, products(name)')
-      .eq('id', orderId)
-      .single();
-
-    if (error) throw error;
-
-    document.getElementById('modal-product-title').innerText = `Thanh toán: ${order.products?.name || 'Sản phẩm'}`;
-    
-    // 1. Fetch system bank settings
-    const { data: bankSettingsRes } = await supabaseClient
-      .from('settings')
-      .select('value')
-      .eq('key', 'bank_settings')
-      .single();
-    
-    const bankVal = bankSettingsRes?.value || {
-      bank_name: "MBBank",
-      account_number: "123456789",
-      account_name: "NGUYEN VAN A",
-      qr_template: "https://api.vietqr.io/image/970422-{account_number}-compact2.jpg?amount={amount}&addInfo={memo}&accountName={account_name}"
-    };
-
-    // 2. Fill Payment Instructions
-    document.getElementById('pay-bank').innerText = bankVal.bank_name;
-    document.getElementById('pay-account').innerText = bankVal.account_number;
-    document.getElementById('pay-name').innerText = bankVal.account_name;
-    document.getElementById('pay-amount').innerText = formatVND(order.amount);
-    document.getElementById('pay-memo').innerText = order.tx_ref;
-
-    // 3. Generate VietQR Link
-    let qrUrl = bankVal.qr_template
-      .replace('{account_number}', bankVal.account_number)
-      .replace('{amount}', order.amount)
-      .replace('{memo}', order.tx_ref)
-      .replace('{account_name}', encodeURIComponent(bankVal.account_name));
-    
-    document.getElementById('payment-qr').src = qrUrl;
-
-    // Switch Modal View Directly to Step 2 (skip email)
-    stepEmail.classList.add('d-none');
-    stepPayment.classList.remove('d-none');
-    stepSuccess.classList.add('d-none');
-    purchaseModal.classList.add('open');
-
-    // 4. Start Polling backend transaction checker
-    startPolling(order.id);
-
-  } catch (err) {
-    alert(`Lỗi mở thanh toán đơn hàng: ${err.message || err}`);
-  }
-};
-
+// Load Categories
 async function loadCategories() {
   const { data: categories, error } = await supabaseClient
     .from('categories')
@@ -206,6 +137,7 @@ async function loadCategories() {
   });
 }
 
+// Load Products
 async function loadProducts() {
   const { data: products, error } = await supabaseClient
     .from('products')
@@ -213,11 +145,11 @@ async function loadProducts() {
     .eq('status', 'active');
   
   if (error) {
-    productsContainer.innerHTML = '<p style="color: var(--danger);">Không thể kết nối cơ sở dữ liệu. Vui lòng thử lại sau.</p>';
+    productsContainer.innerHTML = '<p style="color: var(--danger); text-align: center; grid-column: 1/-1;">Không thể kết nối cơ sở dữ liệu. Vui lòng thử lại sau.</p>';
     return;
   }
 
-  // Fetch stocks count for all products
+  // Count items unsold for auto products
   const { data: items, error: itemsError } = await supabaseClient
     .from('items')
     .select('product_id')
@@ -232,7 +164,7 @@ async function loadProducts() {
 
   allProducts = products.map(p => ({
     ...p,
-    stock: stockMap[p.id] || 0
+    stock: p.product_type === 'auto' ? (stockMap[p.id] || 0) : (p.manual_stock || 0)
   }));
 
   renderProducts(allProducts);
@@ -252,12 +184,13 @@ function renderProducts(products) {
     card.innerHTML = `
       <img src="${p.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60'}" class="product-img" alt="${p.name}">
       <div class="product-content">
-        <h4 class="product-title">${p.name}</h4>
-        <p class="product-desc">${p.description || 'Sản phẩm giao key tự động uy tín, chất lượng.'}</p>
+        <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--accent-primary); font-weight: 700; margin-bottom: 0.25rem;">${p.categories?.name || 'Sản phẩm'}</div>
+        <h4 class="product-title" onclick="location.href='/san-pham/${p.slug}'" style="cursor: pointer;">${p.name}</h4>
+        <p class="product-desc">${p.description || 'Sản phẩm giao key tự động hoặc cày thuê uy tín.'}</p>
         <div class="product-footer">
           <div>
             <div class="product-price">${formatVND(p.price)}</div>
-            <div class="stock-badge ${isOutOfStock ? 'empty' : ''}">${isOutOfStock ? 'Hết hàng' : `Còn lại: ${p.stock}`}</div>
+            <div class="stock-badge ${isOutOfStock ? 'empty' : ''}">${isOutOfStock ? 'Hết hàng' : `Kho: Còn lại ${p.stock}`}</div>
           </div>
           <button class="btn btn-primary" ${isOutOfStock ? 'disabled style="opacity: 0.5; pointer-events: none;"' : ''} onclick="openPurchaseModal('${p.id}')">
             ${isOutOfStock ? 'Hết hàng' : 'Mua Ngay'}
@@ -281,54 +214,230 @@ function filterByCategory(categoryId, activeBtn) {
   }
 }
 
-// Attach filter event to "All" button
 document.querySelector('.cat-btn[data-category="all"]').onclick = function() {
   filterByCategory('all', this);
 };
 
-// Purchase Flow
+// Purchase Modal Checkout flow
 window.openPurchaseModal = function(productId) {
+  if (!authSession) {
+    alert('Bạn cần đăng nhập tài khoản để thực hiện mua hàng bằng số dư.');
+    location.href = '/login';
+    return;
+  }
+
   selectedProduct = allProducts.find(p => p.id === productId);
   if (!selectedProduct || selectedProduct.stock === 0) return;
 
   document.getElementById('modal-product-title').innerText = `Mua: ${selectedProduct.name}`;
-  document.getElementById('modal-product-price').innerText = formatVND(selectedProduct.price);
-  
-  // Set default email value if user is logged in
-  supabaseClient.auth.getSession().then(({ data: { session } }) => {
-    if (session && session.user.email) {
-      document.getElementById('buyer-email').value = session.user.email;
-    }
-  });
+  document.getElementById('checkout-product-price').innerText = formatVND(selectedProduct.price);
+  document.getElementById('checkout-user-balance').innerText = formatVND(userProfile.balance);
 
-  // Reset stages
-  stepEmail.classList.remove('d-none');
-  stepPayment.classList.add('d-none');
-  stepSuccess.classList.add('d-none');
-  
+  // Render dynamic form fields
+  fieldsContainer.innerHTML = '';
+  const fields = selectedProduct.form_fields || [];
+  if (fields.length > 0) {
+    fields.forEach(fieldName => {
+      fieldsContainer.innerHTML += `
+        <div class="form-group">
+          <label class="form-label">${fieldName} <span style="color: var(--danger);">*</span></label>
+          <input type="text" class="form-control checkout-custom-field" data-field-name="${fieldName}" placeholder="Nhập ${fieldName} của bạn" required>
+        </div>
+      `;
+    });
+  }
+
+  // Check balance
+  if (userProfile.balance < selectedProduct.price) {
+    balanceWarning.classList.remove('d-none');
+    redirectDepBtn.classList.remove('d-none');
+    payBalanceBtn.classList.add('d-none');
+  } else {
+    balanceWarning.classList.add('d-none');
+    redirectDepBtn.classList.add('d-none');
+    payBalanceBtn.classList.remove('d-none');
+  }
+
+  checkoutStage.classList.remove('d-none');
+  successStage.classList.add('d-none');
   purchaseModal.classList.add('open');
 };
 
 modalCloseBtn.onclick = () => {
   purchaseModal.classList.remove('open');
-  if (orderPollingInterval) clearInterval(orderPollingInterval);
-  // Auto refresh history if user logged in
-  supabaseClient.auth.getSession().then(({ data: { session } }) => {
-    if (session) loadPurchaseHistory(session.user.id);
-  });
 };
 
-submitEmailBtn.onclick = async () => {
-  const emailInput = document.getElementById('buyer-email');
-  const email = emailInput.value.trim();
-  
-  if (!email || !validateEmail(email)) {
-    alert('Vui lòng nhập địa chỉ email hợp lệ.');
+redirectDepBtn.onclick = () => {
+  purchaseModal.classList.remove('open');
+  navDepositLink.click();
+};
+
+payBalanceBtn.onclick = async () => {
+  // Collect custom inputs
+  const inputs = [];
+  const inputElements = document.querySelectorAll('.checkout-custom-field');
+  let isValid = true;
+
+  inputElements.forEach(el => {
+    const val = el.value.trim();
+    if (!val) {
+      isValid = false;
+      el.style.borderColor = 'var(--danger)';
+    } else {
+      el.style.borderColor = 'var(--border-color)';
+      inputs.push({
+        name: el.getAttribute('data-field-name'),
+        value: val
+      });
+    }
+  });
+
+  if (!isValid) {
+    alert('Vui lòng nhập đầy đủ các thông tin biểu mẫu yêu cầu.');
     return;
   }
 
-  submitEmailBtn.disabled = true;
-  submitEmailBtn.innerText = 'Đang khởi tạo đơn hàng...';
+  payBalanceBtn.disabled = true;
+  payBalanceBtn.innerText = 'Đang thanh toán...';
+
+  try {
+    // Call RPC purchase_product
+    const { data: result, error } = await supabaseClient.rpc('purchase_product', {
+      p_product_id: selectedProduct.id,
+      p_customer_inputs: inputs
+    });
+
+    if (error) throw error;
+
+    // Refresh balance display local and nav
+    userProfile.balance -= selectedProduct.price;
+    navUserBalance.innerText = `Ví: ${formatVND(userProfile.balance)}`;
+
+    // Success Screen
+    checkoutStage.classList.add('d-none');
+    successStage.classList.remove('d-none');
+
+    if (selectedProduct.product_type === 'manual') {
+      document.getElementById('checkout-success-msg').innerText = 'Yêu cầu đã được gửi tới Admin. Vui lòng theo dõi trạng thái xử lý đơn cày thuê trong Lịch sử mua hàng.';
+    } else {
+      document.getElementById('checkout-success-msg').innerText = 'Thanh toán thành công! Key đã được giao, click xem lịch sử mua hàng để lấy ngay.';
+    }
+
+    // Refresh store stocks list
+    await loadProducts();
+
+  } catch (err) {
+    alert('Lỗi thanh toán: ' + err.message);
+  } finally {
+    payBalanceBtn.disabled = false;
+    payBalanceBtn.innerText = 'Thanh Toán Bằng Số Dư';
+  }
+};
+
+document.getElementById('btn-go-to-history').onclick = () => {
+  purchaseModal.classList.remove('open');
+  navHistoryLink.click();
+};
+
+// Purchase History list
+async function loadPurchaseHistory(userId) {
+  historyList.innerHTML = '<div class="loading-spinner"></div>';
+  try {
+    const { data: orders, error } = await supabaseClient
+      .from('orders')
+      .select('*, products(name)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (!orders || orders.length === 0) {
+      historyList.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">Bạn chưa thực hiện giao dịch nào.</p>';
+      return;
+    }
+
+    let html = '';
+    orders.forEach(o => {
+      const dateStr = new Date(o.created_at).toLocaleString('vi-VN');
+      const isCompleted = o.status === 'completed';
+      const isProcessing = o.status === 'processing';
+      
+      // Format dynamic inputs filled by customer
+      let inputsHtml = '';
+      if (o.customer_inputs && o.customer_inputs.length > 0) {
+        inputsHtml = '<div style="margin-top: 0.5rem; font-size: 0.8rem; background: rgba(0,0,0,0.15); padding: 0.5rem; border-radius: 6px;"><strong>Thông tin đã điền:</strong>';
+        o.customer_inputs.forEach(inp => {
+          inputsHtml += `<div>- ${inp.name}: <code>${inp.value}</code></div>`;
+        });
+        inputsHtml += '</div>';
+      }
+
+      html += `
+        <div class="glass-panel" style="padding: 1.25rem; margin-bottom: 1rem; border-color: ${isCompleted ? 'var(--success)' : (isProcessing ? 'var(--accent-primary)' : 'var(--border-color)')};">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-weight: 700; font-size: 1.1rem;">${o.products?.name || 'Sản phẩm đã xóa'}</span>
+            <span class="badge badge-${o.status}">${o.status.toUpperCase()}</span>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+            <div>Mã đơn: <strong>${o.tx_ref}</strong></div>
+            <div>Giá tiền: <strong>${formatVND(o.amount)}</strong></div>
+            <div>Thời gian: ${dateStr}</div>
+            ${inputsHtml}
+          </div>
+          ${isCompleted ? `
+            <div style="background: var(--bg-primary); padding: 0.75rem; border-radius: 6px; font-family: monospace; font-size: 1rem; word-break: break-all; color: var(--text-primary); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+              <span id="hist-key-${o.id}">${o.key_content || 'Key/Account đang xử lý.'}</span>
+              <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="copyText('hist-key-${o.id}')">Copy</button>
+            </div>
+          ` : `
+            <div style="background: rgba(99, 102, 241, 0.05); border: 1px dashed var(--accent-primary); border-radius: 6px; padding: 0.75rem; font-size: 0.88rem; color: var(--text-secondary);">
+              ⏳ Đơn hàng đang được Admin xử lý thủ công (Cày thuê / Nâng cấp tài khoản). Thông tin key kết quả sẽ cập nhật tại đây khi hoàn thành.
+            </div>
+          `}
+        </div>
+      `;
+    });
+    historyList.innerHTML = html;
+  } catch (err) {
+    historyList.innerHTML = `<p style="color: var(--danger); text-align: center;">Lỗi tải lịch sử đơn hàng: ${err.message}</p>`;
+  }
+}
+
+// Deposit tab logic
+let selectedDepositAmount = 10000;
+window.setDepositAmount = function(amount) {
+  selectedDepositAmount = amount;
+  document.getElementById('deposit-amount-input').value = amount;
+  
+  // Highlight active button
+  const btns = document.querySelectorAll('.quick-amt-btn');
+  btns.forEach(btn => {
+    const text = btn.innerText;
+    if (text.includes('50k') && amount === 50000) btn.classList.add('active');
+    else if (text.includes('100k') && amount === 100000) btn.classList.add('active');
+    else if (text.includes('200k') && amount === 200000) btn.classList.add('active');
+    else if (text.includes('500k') && amount === 500000) btn.classList.add('active');
+    else if (text.includes('1M') && amount === 1000000) btn.classList.add('active');
+    else if (text.includes('Khác') && [10000, 50000, 100000, 200000, 500000, 1000000].indexOf(amount) === -1) btn.classList.add('active');
+    else btn.classList.remove('active');
+  });
+};
+
+document.getElementById('deposit-amount-input').oninput = function() {
+  const val = parseInt(this.value);
+  selectedDepositAmount = isNaN(val) ? 0 : val;
+};
+
+// Confirm Deposit step 1 -> step 2
+document.getElementById('btn-confirm-deposit-init').onclick = async () => {
+  if (selectedDepositAmount < 10000) {
+    alert('Số tiền nạp tối thiểu (Min Deposit) là 10.000 VNĐ.');
+    return;
+  }
+
+  const confirmBtn = document.getElementById('btn-confirm-deposit-init');
+  confirmBtn.disabled = true;
+  confirmBtn.innerText = 'Đang khởi tạo hóa đơn nạp...';
 
   try {
     // 1. Fetch system bank settings
@@ -345,21 +454,15 @@ submitEmailBtn.onclick = async () => {
       qr_template: "https://api.vietqr.io/image/970422-{account_number}-compact2.jpg?amount={amount}&addInfo={memo}&accountName={account_name}"
     };
 
-    // 2. Generate a unique transaction memo (e.g. SHOP17232323)
-    const txRef = `SHOP${Math.floor(Date.now() / 1000)}`;
+    // 2. Generate unique deposit memo (e.g. NAP17232323)
+    const txRef = `NAP${Math.floor(Date.now() / 1000)}`;
 
-    // Get current auth user ID if logged in
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    const userId = session ? session.user.id : null;
-
-    // 3. Create a pending order in database
-    const { data: order, error } = await supabaseClient
-      .from('orders')
+    // 3. Create a pending deposit record in database
+    const { data: deposit, error } = await supabaseClient
+      .from('deposits')
       .insert({
-        user_id: userId,
-        buyer_email: email,
-        product_id: selectedProduct.id,
-        amount: selectedProduct.price,
+        user_id: authSession.user.id,
+        amount: selectedDepositAmount,
         status: 'pending',
         tx_ref: txRef
       })
@@ -368,82 +471,76 @@ submitEmailBtn.onclick = async () => {
 
     if (error) throw error;
 
-    // 4. Fill Payment Instructions
-    document.getElementById('pay-bank').innerText = bankVal.bank_name;
-    document.getElementById('pay-account').innerText = bankVal.account_number;
-    document.getElementById('pay-name').innerText = bankVal.account_name;
-    document.getElementById('pay-amount').innerText = formatVND(selectedProduct.price);
-    document.getElementById('pay-memo').innerText = txRef;
+    // 4. Fill Deposit details
+    document.getElementById('dep-bank-name').innerText = bankVal.bank_name;
+    document.getElementById('dep-acct-num').innerText = bankVal.account_number;
+    document.getElementById('dep-acct-name').innerText = bankVal.account_name;
+    document.getElementById('dep-pay-amount').innerText = formatVND(selectedDepositAmount);
+    document.getElementById('dep-pay-memo').innerText = txRef;
 
-    // 5. Generate VietQR Link
+    // 5. Generate QR VietQR
     let qrUrl = bankVal.qr_template
       .replace('{account_number}', bankVal.account_number)
-      .replace('{amount}', selectedProduct.price)
+      .replace('{amount}', selectedDepositAmount)
       .replace('{memo}', txRef)
       .replace('{account_name}', encodeURIComponent(bankVal.account_name));
     
-    document.getElementById('payment-qr').src = qrUrl;
+    document.getElementById('deposit-qr-img').src = qrUrl;
 
-    // Transition Steps
-    stepEmail.classList.add('d-none');
-    stepPayment.classList.remove('d-none');
+    // Transition view
+    document.getElementById('dep-step-input').classList.add('d-none');
+    document.getElementById('dep-step-pay').classList.remove('d-none');
 
-    // 6. Start Polling backend transaction checker
-    startPolling(order.id);
+    // 6. Start Polling backend deposit status
+    startDepositPolling(deposit.id);
 
   } catch (err) {
-    alert(`Lỗi tạo đơn hàng: ${err.message || err}`);
+    alert('Khởi tạo hóa đơn nạp thất bại: ' + err.message);
   } finally {
-    submitEmailBtn.disabled = false;
-    submitEmailBtn.innerText = 'Tiến Hành Thanh Toán';
+    confirmBtn.disabled = false;
+    confirmBtn.innerText = 'Xác Nhận Nạp Tiền';
   }
 };
 
-function startPolling(orderId) {
-  if (orderPollingInterval) clearInterval(orderPollingInterval);
+function startDepositPolling(depositId) {
+  if (depositPollingInterval) clearInterval(depositPollingInterval);
   
-  const statusText = document.getElementById('payment-status-text');
-  const confirmBtn = document.getElementById('btn-confirm-payment');
-  const manualTip = document.getElementById('payment-manual-tip');
+  const statusText = document.getElementById('deposit-status-text');
+  const confirmBtn = document.getElementById('btn-check-deposit-now');
   let pollAttempts = 0;
 
-  // Reset UI
   confirmBtn.disabled = false;
   confirmBtn.innerText = 'Tôi Đã Chuyển Khoản';
-  manualTip.classList.add('d-none');
 
-  const checkPaymentOnce = async (isManual = false) => {
+  const checkDepositOnce = async (isManual = false) => {
     if (isManual) {
       confirmBtn.disabled = true;
       confirmBtn.innerText = 'Đang kiểm tra giao dịch...';
     }
 
     try {
-      const response = await fetch(`/api/check-payment?order_id=${orderId}`);
+      const response = await fetch(`/api/check-deposit?deposit_id=${depositId}`);
       const data = await response.json();
 
       if (data.status === 'success') {
-        clearInterval(orderPollingInterval);
-        document.getElementById('delivered-key').innerText = data.key;
-        stepPayment.classList.add('d-none');
-        stepSuccess.classList.remove('d-none');
-        await loadProducts();
-        return true;
-      } else if (data.status === 'failed') {
-        clearInterval(orderPollingInterval);
-        statusText.innerText = data.message;
-        alert(data.message);
+        clearInterval(depositPollingInterval);
+        alert('Nạp tiền thành công! Số tiền đã được cộng vào tài khoản của bạn.');
+        
+        // Refresh balance in UI and local profile
+        await checkAuthSession();
+        
+        // Redirect back to shop tab
+        navShopLink.click();
         return true;
       } else {
         if (isManual) {
-          alert('Hệ thống chưa nhận được tiền hoặc đang xử lý. Vui lòng đợi 1-2 phút hoặc kiểm tra lại bill chuyển khoản.');
-          manualTip.classList.remove('d-none');
+          alert('Hệ thống chưa nhận được tiền hoặc đang chờ ngân hàng phản hồi. Vui lòng đợi 1-2 phút hoặc kiểm tra lại bill.');
         }
       }
     } catch (err) {
-      console.error('Error checking payment:', err);
+      console.error('Error checking deposit:', err);
       if (isManual) {
-        alert('Lỗi kết nối tới hệ thống kiểm tra thanh toán. Vui lòng thử lại sau.');
+        alert('Lỗi kết nối tới hệ thống kiểm tra nạp tiền. Vui lòng thử lại sau.');
       }
     } finally {
       if (isManual) {
@@ -454,97 +551,24 @@ function startPolling(orderId) {
     return false;
   };
 
-  // Auto polling
-  orderPollingInterval = setInterval(async () => {
+  depositPollingInterval = setInterval(async () => {
     pollAttempts++;
-    statusText.innerText = `Đang chờ thanh toán (Đã quét ${pollAttempts * 3}s)...`;
-    
-    // Show manual fallback after 45 seconds of polling
-    if (pollAttempts >= 15) {
-      manualTip.classList.remove('d-none');
-    }
-    
-    await checkPaymentOnce(false);
+    statusText.innerText = `Đang chờ quét giao dịch (Đã quét ${pollAttempts * 3}s)...`;
+    await checkDepositOnce(false);
   }, 3000);
 
-  // Manual trigger button
+  // Manual check button
   confirmBtn.onclick = async () => {
-    await checkPaymentOnce(true);
+    await checkDepositOnce(true);
   };
 }
 
-finishBtn.onclick = () => {
-  purchaseModal.classList.remove('open');
-  // Auto refresh history if user logged in
-  supabaseClient.auth.getSession().then(({ data: { session } }) => {
-    if (session) loadPurchaseHistory(session.user.id);
-  });
-};
-
-// Tra cứu đơn hàng
-lookupBtn.onclick = async () => {
-  const val = document.getElementById('lookup-input').value.trim();
-  const resultsDiv = document.getElementById('lookup-results');
-  
-  if (!val) {
-    alert('Vui lòng nhập Email hoặc Mã đơn hàng.');
-    return;
-  }
-
-  lookupBtn.disabled = true;
-  lookupBtn.innerText = 'Đang tìm...';
-  resultsDiv.innerHTML = '<div class="loading-spinner"></div>';
-  resultsDiv.style.display = 'block';
-
-  try {
-    let orders = [];
-    
-    if (val.toUpperCase().startsWith('SHOP')) {
-      const { data, error } = await supabaseClient.rpc('get_order_by_tx_ref', { p_tx_ref: val });
-      if (error) throw error;
-      orders = data || [];
-    } else {
-      const { data, error } = await supabaseClient.rpc('get_orders_by_email', { p_email: val });
-      if (error) throw error;
-      orders = data || [];
-    }
-
-    if (orders.length === 0) {
-      resultsDiv.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">Không tìm thấy đơn hàng nào.</p>';
-      return;
-    }
-
-    let html = '<h4 style="margin-bottom: 1rem; font-weight: 700;">Kết quả tra cứu:</h4>';
-    orders.forEach(o => {
-      const dateStr = new Date(o.created_at).toLocaleString('vi-VN');
-      const isCompleted = o.status === 'completed';
-      
-      html += `
-        <div class="glass-panel" style="padding: 1rem; margin-bottom: 1rem; border-color: ${isCompleted ? 'var(--success)' : 'var(--border-color)'};">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-            <span style="font-weight: 700;">${o.product_name || 'Sản phẩm đã xóa'}</span>
-            <span class="badge badge-${o.status}">${o.status.toUpperCase()}</span>
-          </div>
-          <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-            <div>Mã đơn: <strong>${o.tx_ref}</strong></div>
-            <div>Thời gian: ${dateStr}</div>
-            <div>Giá: ${formatVND(o.amount)}</div>
-          </div>
-          ${isCompleted ? `
-            <div style="background: var(--bg-primary); padding: 0.75rem; border-radius: 6px; font-family: monospace; font-size: 1rem; word-break: break-all; color: var(--text-primary); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-              <span id="key-${o.id}">${o.key_content}</span>
-              <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="copyText('key-${o.id}')">Copy</button>
-            </div>
-          ` : '<p style="font-size: 0.85rem; color: var(--warning);">Đơn hàng chưa hoàn thành thanh toán.</p>'}
-        </div>
-      `;
-    });
-    resultsDiv.innerHTML = html;
-  } catch (err) {
-    resultsDiv.innerHTML = `<p style="color: var(--danger);">Lỗi tra cứu: ${err.message}</p>`;
-  } finally {
-    lookupBtn.disabled = false;
-    lookupBtn.innerText = 'Tìm kiếm';
+// Cancel Deposit Button
+document.getElementById('btn-cancel-deposit').onclick = () => {
+  if (confirm('Bạn chắc chắn muốn hủy hóa đơn nạp tiền này?')) {
+    if (depositPollingInterval) clearInterval(depositPollingInterval);
+    document.getElementById('dep-step-input').classList.remove('d-none');
+    document.getElementById('dep-step-pay').classList.add('d-none');
   }
 };
 
@@ -553,17 +577,13 @@ function formatVND(amount) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 }
 
-function validateEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
 window.copyText = function(elementId) {
   const element = document.getElementById(elementId);
   const text = element.innerText || element.textContent;
   
   navigator.clipboard.writeText(text).then(() => {
     const originalText = element.innerText;
-    if (elementId === 'pay-account' || elementId === 'pay-amount' || elementId === 'pay-memo') {
+    if (elementId === 'dep-acct-num' || elementId === 'dep-pay-amount' || elementId === 'dep-pay-memo') {
       element.innerText = 'Đã sao chép!';
       setTimeout(() => element.innerText = originalText, 1000);
     } else {

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chi Tiết Sản Phẩm - LEGION STORE</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .product-detail-container {
+      max-width: 1000px;
+      margin: 4rem auto;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 3rem;
+    }
+    .detail-img {
+      width: 100%;
+      border-radius: 18px;
+      border: 1px solid var(--border-color);
+      max-height: 450px;
+      object-fit: cover;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .detail-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .detail-title {
+      font-size: 2.25rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 0.5rem;
+    }
+    .detail-cat {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent-primary);
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+    .detail-price {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      margin-bottom: 1.5rem;
+    }
+    .detail-desc {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      margin-bottom: 2rem;
+      white-space: pre-wrap;
+    }
+    @media (max-width: 768px) {
+      .product-detail-container {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+        margin: 2rem auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div class="navbar">
+    <div class="logo" onclick="location.href='/'">LEGION STORE</div>
+    <ul class="nav-links">
+      <li><a href="/" class="nav-link" id="nav-shop-link">Cửa Hàng</a></li>
+      <li><a href="/#deposit" class="nav-link" id="nav-deposit-link">Nạp Tiền</a></li>
+      <li><a href="/#purchase-history" class="nav-link" id="nav-history-link">Lịch Sử Mua Hàng</a></li>
+      <li id="nav-balance-wrapper" class="d-none">
+        <div id="nav-user-balance" style="font-weight: 700; color: var(--success); padding: 0.5rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">Ví: 0đ</div>
+      </li>
+      <li><a href="/login" class="nav-link" id="nav-auth-btn">Đăng Nhập</a></li>
+    </ul>
+  </div>
+
+  <div class="container">
+    <div id="product-detail-loader" class="loading-spinner" style="margin: 6rem auto;"></div>
+    
+    <!-- Product Detail Layout -->
+    <div class="product-detail-container d-none" id="product-detail-box">
+      <div>
+        <img src="" id="prod-img" class="detail-img" alt="Sản phẩm">
+      </div>
+      <div class="detail-info">
+        <div class="detail-cat" id="prod-cat">DANH MỤC</div>
+        <h1 class="detail-title" id="prod-title">Tên sản phẩm</h1>
+        <div class="stock-badge" id="prod-stock" style="align-self: flex-start; margin-bottom: 1.5rem;">Kho: Còn lại 0</div>
+        <div class="detail-price" id="prod-price">0 VNĐ</div>
+        <div class="detail-desc" id="prod-desc">Mô tả chi tiết sản phẩm.</div>
+        
+        <button id="btn-buy-now" class="btn btn-primary" style="justify-content: center; padding: 1rem; font-size: 1.1rem; width: 100%; border-radius: 12px;">
+          Mua Ngay
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Purchase Modal (Same as index.html for checkout consistency) -->
+  <div class="modal-overlay" id="purchase-modal">
+    <div class="glass-panel modal-container">
+      <div class="modal-header">
+        <h3 id="modal-product-title">Mua sản phẩm</h3>
+        <button class="modal-close" id="modal-close-btn">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Form Fields and Balance Payment -->
+        <div id="modal-checkout-stage">
+          <div id="product-custom-fields-container">
+            <!-- Dynamic fields populated by JS -->
+          </div>
+          
+          <div class="payment-details mt-4">
+            <div class="payment-row">
+              <span class="payment-label">Giá bán sản phẩm:</span>
+              <span class="payment-val" id="checkout-product-price" style="color: var(--accent-secondary); font-size: 1.1rem;">0đ</span>
+            </div>
+            <div class="payment-row">
+              <span class="payment-label">Số dư hiện tại của bạn:</span>
+              <span class="payment-val" id="checkout-user-balance">0đ</span>
+            </div>
+          </div>
+
+          <div id="checkout-balance-warning" class="d-none" style="color: var(--danger); font-size: 0.85rem; font-weight: 600; margin: 1rem 0; padding: 0.5rem; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 6px; background: rgba(239, 68, 68, 0.05); text-align: center;">
+            Số dư của bạn không đủ! Vui lòng nạp thêm tiền.
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem; width: 100%;">
+            <button id="btn-redirect-deposit" class="btn btn-primary d-none" style="flex: 1; justify-content: center; padding: 0.75rem;">
+              Nạp Tiền Ngay
+            </button>
+            <button id="btn-pay-balance" class="btn btn-success" style="flex: 1; justify-content: center; padding: 0.75rem;">
+              Thanh Toán Bằng Số Dư
+            </button>
+          </div>
+        </div>
+
+        <!-- Success Screen -->
+        <div id="modal-success-stage" class="d-none">
+          <div style="text-align: center; padding: 1.5rem 0;">
+            <div style="color: var(--success); font-size: 3.5rem; margin-bottom: 0.5rem;">✔</div>
+            <h4 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">MUA HÀNG THÀNH CÔNG!</h4>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">Đơn hàng của bạn đã được ghi nhận. Vui lòng bấm vào nút dưới để xem key hoặc theo dõi tiến trình.</p>
+            <button id="btn-go-to-history" class="btn btn-success" style="width: 100%; justify-content: center; padding: 0.75rem;">
+              Xem Lịch Sử Mua Hàng
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Zalo Contact Button -->
+  <a href="https://zalo.me/0349255864" target="_blank" class="zalo-float-btn" title="Hỗ trợ Zalo: 0349255864">
+    <svg class="zalo-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12.002 2C6.48 2 2 5.926 2 10.774c0 2.5 1.205 4.747 3.127 6.275l-.892 3.267a.75.75 0 0 0 1.077.838l3.968-2.18c.866.242 1.776.374 2.722.374 5.522 0 10.002-3.926 10.002-8.774C22.004 5.926 17.524 2 12.002 2zm3.328 12.44h-5.06l5.06-5.83v-.86H9.722v1.25h4.634l-5.06 5.83v.86h6.034v-1.25z"/>
+    </svg>
+  </a>
+
+  <!-- Supabase Script -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/config.js"></script>
+  <script>
+    const { createClient } = supabase;
+    const supabaseClient = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
+
+    let currentProduct = null;
+    let userProfile = null;
+    let authSession = null;
+
+    async function initProductPage() {
+      await checkAuthSession();
+      await loadProductDetails();
+    }
+
+    async function checkAuthSession() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      authSession = session;
+      const authBtn = document.getElementById('nav-auth-btn');
+      const balanceWrapper = document.getElementById('nav-balance-wrapper');
+      
+      if (session) {
+        authBtn.innerText = 'Đăng Xuất';
+        authBtn.onclick = async (e) => {
+          e.preventDefault();
+          await supabaseClient.auth.signOut();
+          location.href = '/';
+        };
+
+        // Fetch User balance
+        const { data: profile } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile) {
+          userProfile = profile;
+          document.getElementById('nav-user-balance').innerText = `Ví: ${formatVND(profile.balance)}`;
+          balanceWrapper.classList.remove('d-none');
+        }
+      } else {
+        authBtn.innerText = 'Đăng Nhập';
+        authBtn.onclick = () => location.href = '/login';
+        balanceWrapper.classList.add('d-none');
+      }
+    }
+
+    async function loadProductDetails() {
+      const loader = document.getElementById('product-detail-loader');
+      const detailBox = document.getElementById('product-detail-box');
+      
+      // Parse slug from URL: /san-pham/netflix-premium -> netflix-premium
+      const pathParts = window.location.pathname.split('/');
+      const slug = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+
+      if (!slug) {
+        loader.innerHTML = '<p style="color: var(--danger);">Đường dẫn không hợp lệ.</p>';
+        return;
+      }
+
+      try {
+        const { data: product, error } = await supabaseClient
+          .from('products')
+          .select('*, categories(name)')
+          .eq('slug', slug)
+          .single();
+
+        if (error || !product) throw error || new Error('Product not found');
+        currentProduct = product;
+
+        // Fetch stock count
+        let stock = 0;
+        if (product.product_type === 'auto') {
+          const { count } = await supabaseClient
+            .from('items')
+            .select('*', { count: 'exact', head: true })
+            .eq('product_id', product.id)
+            .eq('is_sold', false);
+          stock = count || 0;
+        } else {
+          stock = product.manual_stock || 0;
+        }
+        currentProduct.stock = stock;
+
+        // Set Details UI
+        document.getElementById('prod-img').src = product.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60';
+        document.getElementById('prod-title').innerText = product.name;
+        document.getElementById('prod-cat').innerText = product.categories?.name || 'Sản phẩm';
+        document.getElementById('prod-price').innerText = formatVND(product.price);
+        document.getElementById('prod-desc').innerText = product.description || 'Sản phẩm giao key tự động uy tín, chất lượng.';
+
+        const stockBadge = document.getElementById('prod-stock');
+        if (stock === 0) {
+          stockBadge.innerText = 'Hết hàng';
+          stockBadge.className = 'stock-badge empty';
+          document.getElementById('btn-buy-now').disabled = true;
+          document.getElementById('btn-buy-now').style.opacity = '0.5';
+          document.getElementById('btn-buy-now').innerText = 'Hết Hàng';
+        } else {
+          stockBadge.innerText = `Kho: Còn lại ${stock}`;
+          stockBadge.className = 'stock-badge';
+        }
+
+        // Title update for SEO
+        document.title = `${product.name} - LEGION STORE`;
+
+        loader.classList.add('d-none');
+        detailBox.classList.remove('d-none');
+
+        // Buy button event
+        document.getElementById('btn-buy-now').onclick = openPurchaseModal;
+
+      } catch (err) {
+        loader.innerHTML = `<p style="color: var(--danger); text-align: center;">Không tìm thấy sản phẩm hoặc có lỗi xảy ra: ${err.message}</p>`;
+      }
+    }
+
+    // Purchase Modal Flow
+    const purchaseModal = document.getElementById('purchase-modal');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+    const checkoutStage = document.getElementById('modal-checkout-stage');
+    const successStage = document.getElementById('modal-success-stage');
+    const fieldsContainer = document.getElementById('product-custom-fields-container');
+    const payBalanceBtn = document.getElementById('btn-pay-balance');
+    const redirectDepBtn = document.getElementById('btn-redirect-deposit');
+    const balanceWarning = document.getElementById('checkout-balance-warning');
+
+    function openPurchaseModal() {
+      if (!authSession) {
+        // Enforce login
+        alert('Bạn cần đăng nhập tài khoản để thực hiện mua hàng bằng số dư.');
+        location.href = '/login';
+        return;
+      }
+
+      document.getElementById('modal-product-title').innerText = `Mua: ${currentProduct.name}`;
+      document.getElementById('checkout-product-price').innerText = formatVND(currentProduct.price);
+      document.getElementById('checkout-user-balance').innerText = formatVND(userProfile.balance);
+
+      // Render custom form fields
+      fieldsContainer.innerHTML = '';
+      const fields = currentProduct.form_fields || [];
+      if (fields.length > 0) {
+        fields.forEach(fieldName => {
+          fieldsContainer.innerHTML += `
+            <div class="form-group">
+              <label class="form-label">${fieldName} <span style="color: var(--danger);">*</span></label>
+              <input type="text" class="form-control custom-input-field" data-field-name="${fieldName}" placeholder="Nhập ${fieldName} của bạn" required>
+            </div>
+          `;
+        });
+      }
+
+      // Check balance
+      if (userProfile.balance < currentProduct.price) {
+        balanceWarning.classList.remove('d-none');
+        redirectDepBtn.classList.remove('d-none');
+        payBalanceBtn.classList.add('d-none');
+      } else {
+        balanceWarning.classList.add('d-none');
+        redirectDepBtn.classList.add('d-none');
+        payBalanceBtn.classList.remove('d-none');
+      }
+
+      checkoutStage.classList.remove('d-none');
+      successStage.classList.add('d-none');
+      purchaseModal.classList.add('open');
+    }
+
+    modalCloseBtn.onclick = () => {
+      purchaseModal.classList.remove('open');
+    };
+
+    redirectDepBtn.onclick = () => {
+      location.href = '/#deposit';
+    };
+
+    payBalanceBtn.onclick = async () => {
+      // Collect custom inputs
+      const inputs = [];
+      const inputFields = document.querySelectorAll('.custom-input-field');
+      let isValid = true;
+
+      inputFields.forEach(el => {
+        const val = el.value.trim();
+        if (!val) {
+          isValid = false;
+          el.style.borderColor = 'var(--danger)';
+        } else {
+          el.style.borderColor = 'var(--border-color)';
+          inputs.push({
+            name: el.getAttribute('data-field-name'),
+            value: val
+          });
+        }
+      });
+
+      if (!isValid) {
+        alert('Vui lòng điền đầy đủ thông tin biểu mẫu yêu cầu.');
+        return;
+      }
+
+      payBalanceBtn.disabled = true;
+      payBalanceBtn.innerText = 'Đang thanh toán...';
+
+      try {
+        // Call RPC purchase_product
+        const { data: resultKey, error } = await supabaseClient.rpc('purchase_product', {
+          p_product_id: currentProduct.id,
+          p_customer_inputs: inputs
+        });
+
+        if (error) throw error;
+
+        // Success transition
+        checkoutStage.classList.add('d-none');
+        successStage.classList.remove('d-none');
+
+        // Check if manual or auto
+        if (currentProduct.product_type === 'manual') {
+          document.getElementById('checkout-success-msg').innerText = 'Yêu cầu của bạn đã được gửi tới Admin. Vui lòng theo dõi trạng thái xử lý cày thuê trong Lịch sử mua hàng.';
+        } else {
+          document.getElementById('checkout-success-msg').innerText = 'Thanh toán thành công! Key tài khoản đã được giao. Vui lòng bấm vào nút dưới để nhận key của bạn.';
+        }
+
+      } catch (err) {
+        alert('Giao dịch thất bại: ' + err.message);
+      } finally {
+        payBalanceBtn.disabled = false;
+        payBalanceBtn.innerText = 'Thanh Toán Bằng Số Dư';
+      }
+    };
+
+    document.getElementById('btn-go-to-history').onclick = () => {
+      location.href = '/#purchase-history';
+    };
+
+    // Utilities
+    function formatVND(amount) {
+      return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+    }
+
+    initProductPage();
+  </script>
+</body>
+</html>

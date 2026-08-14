@@ -3,149 +3,243 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard - SHOPBANHANG</title>
+  <title>Admin Dashboard - LEGION STORE</title>
   <link rel="stylesheet" href="/styles.css">
+  <style>
+    body {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+      padding-bottom: 0;
+    }
+    .sidebar {
+      background: #0f172a;
+      border-right: 1px solid var(--border-color);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .sidebar-brand {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 2rem;
+      padding: 0 0.5rem;
+    }
+    .sidebar-menu-btn {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-radius: 8px;
+      font-family: var(--font-display);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .sidebar-menu-btn:hover, .sidebar-menu-btn.active {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .sidebar-menu-btn.active {
+      color: var(--accent-primary);
+      background: rgba(99, 102, 241, 0.08);
+    }
+    .main-content {
+      padding: 2rem 3rem;
+      overflow-y: auto;
+    }
+    .section-title {
+      font-size: 1.75rem;
+      font-weight: 800;
+      margin-bottom: 1.5rem;
+    }
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin-top: 1.5rem;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    th, td {
+      padding: 1rem;
+      font-size: 0.9rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    th {
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+    .action-btn-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+    @media (max-width: 992px) {
+      body {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        display: none;
+      }
+      .main-content {
+        padding: 1.5rem;
+      }
+    }
+  </style>
 </head>
 <body>
 
-  <!-- Navbar -->
-  <div class="navbar">
-    <div class="logo" onclick="location.href='/'">⚙️ SHOPBANHANG ADMIN</div>
-    <ul class="nav-links">
-      <li><span id="admin-user-email" style="font-size: 0.9rem; color: var(--text-secondary);"></span></li>
-      <li><button id="admin-logout-btn" class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Đăng Xuất</button></li>
-    </ul>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-brand">LEGION STORE <span style="font-size: 0.8rem; color: var(--text-secondary); display: block;">Admin Panel</span></div>
+    <button class="sidebar-menu-btn active" id="menu-products">📦 Kho Hàng & Sản Phẩm</button>
+    <button class="sidebar-menu-btn" id="menu-orders-auto">📝 Đơn Hàng Auto</button>
+    <button class="sidebar-menu-btn" id="menu-orders-manual">🛠️ Đơn Cày Thuê (Manual)</button>
+    <button class="sidebar-menu-btn" id="menu-deposits">💳 Quản Lý Nạp Tiền</button>
+    <button class="sidebar-menu-btn" id="menu-customers">👥 Quản Lý Khách Hàng</button>
+    <button class="sidebar-menu-btn" id="menu-bank">⚙️ Cấu Hình Bank</button>
+    <button class="sidebar-menu-btn" style="margin-top: auto; color: var(--danger);" onclick="location.href='/'">← Về Cửa Hàng</button>
   </div>
 
-  <div class="admin-container">
-    <!-- Sidebar -->
-    <div class="admin-sidebar">
-      <div class="admin-menu-item active" data-tab="tab-dashboard">📊 Tổng Quan</div>
-      <div class="admin-menu-item" data-tab="tab-products">📦 Sản Phẩm</div>
-      <div class="admin-menu-item" data-tab="tab-keys">🔑 Quản Lý Kho Key</div>
-      <div class="admin-menu-item" data-tab="tab-orders">📝 Đơn Hàng</div>
-      <div class="admin-menu-item" data-tab="tab-settings">⚙️ Cấu Hình Bank</div>
-    </div>
-
-    <!-- Main Content Area -->
-    <div class="admin-content">
-
-      <!-- ================= DASHBOARD TAB ================= -->
-      <div id="tab-dashboard" class="admin-tab-section">
-        <div class="admin-header">
-          <h2>Tổng Quan Cửa Hàng</h2>
-        </div>
-        <div class="admin-stats-grid">
-          <div class="glass-panel stat-card">
-            <div class="stat-card-title">Doanh Thu</div>
-            <div class="stat-card-val" id="stat-revenue" style="color: var(--accent-secondary);">0đ</div>
-          </div>
-          <div class="glass-panel stat-card">
-            <div class="stat-card-title">Đơn hàng hoàn thành</div>
-            <div class="stat-card-val" id="stat-orders-completed" style="color: var(--success);">0</div>
-          </div>
-          <div class="glass-panel stat-card">
-            <div class="stat-card-title">Tổng số sản phẩm</div>
-            <div class="stat-card-val" id="stat-products-count">0</div>
-          </div>
-          <div class="glass-panel stat-card">
-            <div class="stat-card-title">Key trong kho</div>
-            <div class="stat-card-val" id="stat-keys-unsold" style="color: var(--warning);">0</div>
-          </div>
-        </div>
-
-        <h3 class="mb-4" style="font-family: var(--font-display); font-weight: 700;">Đơn hàng gần đây</h3>
-        <div class="admin-table-container">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>Mã Đơn</th>
-                <th>Khách Hàng</th>
-                <th>Sản Phẩm</th>
-                <th>Số Tiền</th>
-                <th>Trạng Thái</th>
-                <th>Thời Gian</th>
-              </tr>
-            </thead>
-            <tbody id="recent-orders-table">
-              <tr>
-                <td colspan="6" class="text-center" style="color: var(--text-secondary);">Đang tải đơn hàng...</td>
-              </tr>
-            </tbody>
-          </table>
+  <!-- Main Content Areas -->
+  <div class="main-content">
+    
+    <!-- 1. PRODUCT MANAGEMENT TAB -->
+    <div id="sec-products" class="tab-section">
+      <div class="section-title">Quản Lý Sản Phẩm & Kho Hàng</div>
+      
+      <!-- Category Creation -->
+      <div class="glass-panel" style="padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+        <h4 style="margin-bottom: 1rem;">Tạo Danh Mục Mới</h4>
+        <div class="form-group" style="display: flex; gap: 0.5rem; margin-bottom: 0;">
+          <input type="text" id="cat-name-input" class="form-control" placeholder="Tên danh mục (ví dụ: Key Netflix)">
+          <button id="btn-create-category" class="btn btn-primary">Tạo Danh Mục</button>
         </div>
       </div>
 
-      <!-- ================= PRODUCTS TAB ================= -->
-      <div id="tab-products" class="admin-tab-section d-none">
-        <div class="admin-header">
-          <h2>Danh Sách Sản Phẩm</h2>
-          <button class="btn btn-primary" id="add-product-btn">+ Thêm sản phẩm</button>
+      <!-- Add Product -->
+      <div class="glass-panel" style="padding: 2rem; border-radius: 16px; margin-bottom: 2rem;">
+        <h4 style="margin-bottom: 1.5rem;" id="product-form-title">Đăng Sản Phẩm Mới</h4>
+        <form id="product-form">
+          <input type="hidden" id="prod-id">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label">Tên sản phẩm</label>
+              <input type="text" id="prod-name" class="form-control" placeholder="Netflix Premium 1 Tháng" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">SEO Slug (Đường dẫn riêng biệt)</label>
+              <input type="text" id="prod-slug" class="form-control" placeholder="netflix-premium-1-thang" required>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label">Danh mục sản phẩm</label>
+              <select id="prod-category" class="form-control" style="background: var(--bg-primary);"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Giá bán (VNĐ)</label>
+              <input type="number" id="prod-price" class="form-control" placeholder="20000" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ảnh sản phẩm URL</label>
+              <input type="text" id="prod-image" class="form-control" placeholder="https://...">
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label">Loại sản phẩm</label>
+              <select id="prod-type" class="form-control" style="background: var(--bg-primary);">
+                <option value="auto">Bán tự động (Auto Stock: Giao key từ Kho hàng)</option>
+                <option value="manual">Cày thuê / Thủ công (Khách điền biểu mẫu nâng cấp)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Số lượng Kho Thủ công (Chỉ dành cho Manual)</label>
+              <input type="number" id="prod-manual-stock" class="form-control" value="100" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Trạng thái hoạt động</label>
+              <select id="prod-status" class="form-control" style="background: var(--bg-primary);">
+                <option value="active">Hoạt động (Active)</option>
+                <option value="inactive">Tạm ẩn (Inactive)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Thiết lập biểu mẫu khách cần điền (Chỉ dành cho Manual, ví dụ: <code>Tài khoản, Mật khẩu, Ghi chú</code>)</label>
+            <input type="text" id="prod-fields" class="form-control" placeholder="Để trống nếu không cần điền, hoặc ghi các trường cách nhau bởi dấu phẩy">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Mô tả sản phẩm</label>
+            <textarea id="prod-desc" class="form-control" rows="3" placeholder="Chi tiết bảo hành, thông tin sản phẩm..."></textarea>
+          </div>
+          
+          <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <button type="button" id="btn-cancel-edit" class="btn d-none">Hủy Sửa</button>
+            <button type="submit" class="btn btn-primary">Lưu Sản Phẩm</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Add Keys (Auto products) -->
+      <div class="glass-panel" style="padding: 2rem; border-radius: 16px; margin-bottom: 2rem;">
+        <h4 style="margin-bottom: 1rem;">Nạp Key/Tài Khoản Vào Kho (Hàng Auto)</h4>
+        <div class="form-group">
+          <label class="form-label">Chọn sản phẩm Auto để nạp key</label>
+          <select id="key-prod-select" class="form-control" style="background: var(--bg-primary);"></select>
         </div>
-        
-        <div class="admin-table-container">
-          <table class="admin-table">
+        <div class="form-group">
+          <label class="form-label">Dán danh sách Key / Tài khoản (Mỗi dòng là 1 Key)</label>
+          <textarea id="keys-input" class="form-control" rows="5" placeholder="key-netflix-1234&#10;key-netflix-5678&#10;email@netflix.com|password123"></textarea>
+        </div>
+        <button id="btn-add-keys" class="btn btn-success">Thêm Key Vào Kho</button>
+      </div>
+
+      <!-- Products List -->
+      <div class="glass-panel" style="padding: 1.5rem; border-radius: 16px;">
+        <h4 style="margin-bottom: 1rem;">Danh Sách Sản Phẩm Hiện Có</h4>
+        <div class="table-container">
+          <table>
             <thead>
               <tr>
-                <th>Tên Sản Phẩm</th>
+                <th>Ảnh</th>
+                <th>Sản Phẩm</th>
+                <th>Danh Mục</th>
                 <th>Giá</th>
+                <th>Loại</th>
                 <th>Kho Hàng</th>
                 <th>Trạng Thái</th>
-                <th>Thao Tác</th>
+                <th>Hành Động</th>
               </tr>
             </thead>
-            <tbody id="products-table">
-              <!-- Rendered via JS -->
-            </tbody>
+            <tbody id="tbl-products-body"></tbody>
           </table>
         </div>
       </div>
+    </div>
 
-      <!-- ================= KEYS TAB ================= -->
-      <div id="tab-keys" class="admin-tab-section d-none">
-        <div class="admin-header">
-          <h2>Quản Lý Kho Key / Tài Khoản</h2>
-        </div>
-        
-        <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 2rem;">
-          <h3 class="mb-4" style="font-family: var(--font-display); font-size: 1.2rem; font-weight: 700;">Nhập Key Hàng Loạt</h3>
-          <div class="form-group">
-            <label class="form-label">Chọn Sản Phẩm</label>
-            <select id="key-product-select" class="form-control" style="background-color: var(--bg-primary);"></select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Danh sách Key / Tài khoản (Mỗi dòng 1 key)</label>
-            <textarea id="keys-input" class="form-control" rows="8" placeholder="Taikhoan1|Matkhau1&#10;Taikhoan2|Matkhau2&#10;KEY-A-B-C" style="background-color: var(--bg-primary); font-family: monospace;"></textarea>
-          </div>
-          <button id="import-keys-btn" class="btn btn-primary" style="padding: 0.75rem 2rem;">Nhập Kho</button>
-        </div>
-
-        <h3 class="mb-4" style="font-family: var(--font-display); font-weight: 700;">Thống kê Key</h3>
-        <div class="admin-table-container">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>Sản Phẩm</th>
-                <th>Key Chưa Bán (Còn lại)</th>
-                <th>Key Đã Bán</th>
-                <th>Tổng Cộng</th>
-              </tr>
-            </thead>
-            <tbody id="keys-stats-table">
-              <!-- Rendered via JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ================= ORDERS TAB ================= -->
-      <div id="tab-orders" class="admin-tab-section d-none">
-        <div class="admin-header">
-          <h2>Danh Sách Đơn Hàng</h2>
-        </div>
-        
-        <div class="admin-table-container">
-          <table class="admin-table">
+    <!-- 2. AUTO ORDERS MANAGEMENT TAB -->
+    <div id="sec-orders-auto" class="tab-section d-none">
+      <div class="section-title">Lịch Sử Đơn Hàng Auto</div>
+      <div class="glass-panel" style="padding: 1.5rem; border-radius: 16px;">
+        <div class="table-container">
+          <table>
             <thead>
               <tr>
                 <th>Mã Đơn</th>
@@ -153,100 +247,158 @@
                 <th>Sản Phẩm</th>
                 <th>Số Tiền</th>
                 <th>Trạng Thái</th>
-                <th>Nội Dung Key</th>
+                <th>Key Đã Giao</th>
                 <th>Thời Gian</th>
               </tr>
             </thead>
-            <tbody id="all-orders-table">
-              <!-- Rendered via JS -->
-            </tbody>
+            <tbody id="tbl-orders-auto-body"></tbody>
           </table>
         </div>
       </div>
+    </div>
 
-      <!-- ================= SETTINGS TAB ================= -->
-      <div id="tab-settings" class="admin-tab-section d-none">
-        <div class="admin-header">
-          <h2>Cấu Hình Hệ Thống & Cổng MBBank</h2>
+    <!-- 3. MANUAL ORDERS (CUSTOM REQUESTS) TAB -->
+    <div id="sec-orders-manual" class="tab-section d-none">
+      <div class="section-title">Quản Lý Đơn Hàng Thủ Công (Cày Thuê / Nâng Cấp)</div>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Danh sách đơn hàng cày thuê hoặc yêu cầu thông tin từ khách hàng cần xử lý.</p>
+      
+      <div class="glass-panel" style="padding: 1.5rem; border-radius: 16px;">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Mã Đơn</th>
+                <th>Khách Hàng</th>
+                <th>Sản Phẩm</th>
+                <th>Số Tiền</th>
+                <th>Biểu Mẫu Khách Điền</th>
+                <th>Trạng Trạng Thái</th>
+                <th>Kết Quả / Key Trả</th>
+                <th>Hành Động</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-orders-manual-body"></tbody>
+          </table>
         </div>
-        
-        <div class="glass-panel" style="padding: 2rem;">
-          <h3 class="mb-4" style="font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; color: var(--accent-secondary);">Thông Tin Nhận Thanh Toán (Công Khai)</h3>
-          
+      </div>
+    </div>
+
+    <!-- 4. DEPOSIT BILLS MANAGEMENT TAB -->
+    <div id="sec-deposits" class="tab-section d-none">
+      <div class="section-title">Quản Lý Hóa Đơn Nạp Tiền</div>
+      
+      <div class="glass-panel" style="padding: 1.5rem; border-radius: 16px;">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Mã Nạp</th>
+                <th>Khách Hàng</th>
+                <th>Số Tiền</th>
+                <th>Trạng Thái</th>
+                <th>Thời Gian</th>
+                <th>Hành Động</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-deposits-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. CUSTOMER ACCOUNTS TAB -->
+    <div id="sec-customers" class="tab-section d-none">
+      <div class="section-title">Quản Lý Tài Khoản Khách Hàng</div>
+      
+      <!-- Customer Info Details Modal (Dynamic Overlay inside) -->
+      <div class="glass-panel" style="padding: 1.5rem; border-radius: 16px; margin-bottom: 2rem;">
+        <h4>Cộng / Trừ Tiền Thủ Công</h4>
+        <div style="display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap;">
+          <input type="text" id="cust-id-input" class="form-control" style="flex: 2; min-width: 200px;" placeholder="Dán UUID của Khách hàng">
+          <input type="number" id="cust-amount-input" class="form-control" style="flex: 1; min-width: 120px;" placeholder="Số tiền (âm để trừ)">
+          <button id="btn-adjust-balance" class="btn btn-success">Cập Nhật Ví</button>
+        </div>
+      </div>
+
+      <div class="glass-panel" style="padding: 1.5rem; border-radius: 16px;">
+        <h4 style="margin-bottom: 1rem;">Danh Sách Khách Hàng</h4>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>ID Người Dùng</th>
+                <th>Email</th>
+                <th>Vai Trò</th>
+                <th>Số Dư Ví</th>
+                <th>Thời Gian Đăng Ký</th>
+                <th>Hành Động</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-customers-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. BANK INTEGRATION CONFIGURATION TAB -->
+    <div id="sec-bank" class="tab-section d-none">
+      <div class="section-title">Cấu Hình Tài Khoản Nhận Tiền</div>
+      
+      <div class="glass-panel" style="padding: 2rem; border-radius: 16px;">
+        <form id="bank-settings-form">
           <div class="form-group">
             <label class="form-label">Tên Ngân Hàng</label>
-            <input type="text" id="cfg-bank-name" class="form-control" value="MBBank">
+            <input type="text" id="cfg-bank-name" class="form-control" value="MBBank" required>
           </div>
           <div class="form-group">
             <label class="form-label">Số Tài Khoản</label>
-            <input type="text" id="cfg-bank-account" class="form-control" placeholder="123456789">
+            <input type="text" id="cfg-bank-account" class="form-control" placeholder="000999988889" required>
           </div>
           <div class="form-group">
             <label class="form-label">Tên Chủ Tài Khoản (Viết hoa không dấu)</label>
-            <input type="text" id="cfg-bank-name-owner" class="form-control" placeholder="NGUYEN VAN A">
+            <input type="text" id="cfg-bank-name-owner" class="form-control" placeholder="NGUYEN GIA KHANG" required>
           </div>
-
-          <h3 class="mb-4 mt-4" style="font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; color: var(--warning);">Cấu Hình MBBank Auto Check (Bảo Mật)</h3>
-          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">Nhập thông tin tài khoản đăng nhập app MBBank để tự động quét kiểm tra giao dịch chuyển khoản.</p>
           
-          <div class="form-group">
-            <label class="form-label">Tên đăng nhập MBBank (Username)</label>
-            <input type="text" id="cfg-mb-username" class="form-control" placeholder="Nhập tên đăng nhập MBBank">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Mật khẩu MBBank (Password)</label>
-            <input type="password" id="cfg-mb-password" class="form-control" placeholder="Nhập mật khẩu MBBank">
+          <div style="border-top: 1px dashed var(--border-color); margin: 2rem 0; padding-top: 1.5rem;">
+            <h5 style="color: var(--accent-secondary); margin-bottom: 1rem;">Cấu Hình MBBank Auto Check (Kết Nối Ngầm)</h5>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label class="form-label">Tên Đăng Nhập App MBBank</label>
+                <input type="text" id="cfg-mb-username" class="form-control" placeholder="0867073198">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Mật Khẩu App MBBank</label>
+                <input type="password" id="cfg-mb-password" class="form-control" placeholder="••••••••">
+              </div>
+            </div>
           </div>
 
-          <button id="save-settings-btn" class="btn btn-primary" style="padding: 0.75rem 2rem; margin-top: 1rem; width: 100%; justify-content: center;">Lưu cấu hình</button>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Modal Add/Edit Product -->
-  <div class="modal-overlay" id="product-modal">
-    <div class="glass-panel modal-container">
-      <div class="modal-header">
-        <h3 id="product-modal-title">Thêm Sản Phẩm Mới</h3>
-        <button class="modal-close" id="product-modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <form id="product-form">
-          <input type="hidden" id="p-id">
-          <div class="form-group">
-            <label class="form-label">Tên Sản Phẩm</label>
-            <input type="text" id="p-name" class="form-control" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Mô tả sản phẩm</label>
-            <textarea id="p-desc" class="form-control" rows="3"></textarea>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Đơn giá (VND)</label>
-            <input type="number" id="p-price" class="form-control" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Đường dẫn ảnh (URL)</label>
-            <input type="text" id="p-image" class="form-control" placeholder="https://unsplash.com/...">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Trạng thái hoạt động</label>
-            <select id="p-status" class="form-control">
-              <option value="active">Đang Bán (Active)</option>
-              <option value="inactive">Ngừng Bán (Inactive)</option>
-            </select>
-          </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.75rem; margin-top: 1rem;">
-            Lưu Sản Phẩm
-          </button>
+          <button type="submit" class="btn btn-primary">Lưu Cấu Hình Bank</button>
         </form>
       </div>
     </div>
+
   </div>
 
-  <!-- Supabase CDN -->
+  <!-- Manual Order Key Delivery Overlay Modal -->
+  <div class="modal-overlay" id="admin-order-modal">
+    <div class="glass-panel modal-container" style="max-width: 450px;">
+      <div class="modal-header">
+        <h3>Hoàn Thành Đơn Hàng Cày Thuê</h3>
+        <button class="modal-close" onclick="closeAdminOrderModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="admin-modal-order-id">
+        <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1rem;">Nhập thông tin kết quả (Key, Tài khoản hoặc nội dung thông báo) để gửi cho khách hàng:</p>
+        <div class="form-group">
+          <textarea id="admin-modal-key-content" class="form-control" rows="4" placeholder="Ví dụ: Email: custom@legion.com | Pass: 123456"></textarea>
+        </div>
+        <button id="btn-admin-submit-complete" class="btn btn-success" style="width: 100%; justify-content: center; padding: 0.75rem;">Xác Nhận & Gửi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase CDN and Admin Logic -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/config.js"></script>
   <script src="/admin.js"></script>
