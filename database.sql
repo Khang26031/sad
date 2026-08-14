@@ -12,6 +12,18 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+-- Hàm kiểm tra admin (SECURITY DEFINER chạy bằng quyền của hệ thống, giúp tránh lỗi lặp vô hạn RLS)
+CREATE OR REPLACE FUNCTION public.is_admin(p_user_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM public.profiles 
+        WHERE id = p_user_id AND role = 'admin'
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Tạo Policies cho profiles
 CREATE POLICY "Cho phép người dùng đọc thông tin của chính mình" ON public.profiles
     FOR SELECT USING (auth.uid() = id);
 
@@ -19,12 +31,7 @@ CREATE POLICY "Cho phép người dùng cập nhật thông tin của chính mì
     FOR UPDATE USING (auth.uid() = id);
 
 CREATE POLICY "Admin có toàn quyền trên profiles" ON public.profiles
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
-        )
-    );
+    FOR ALL USING (public.is_admin(auth.uid()));
 
 -- Tự động tạo profile khi có user đăng ký qua Supabase Auth
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -59,12 +66,7 @@ CREATE TABLE IF NOT EXISTS public.settings (
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admin có toàn quyền trên settings" ON public.settings
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
-        )
-    );
+    FOR ALL USING (public.is_admin(auth.uid()));
 
 CREATE POLICY "Cho phép khách xem thông tin công khai" ON public.settings
     FOR SELECT USING (TRUE);
@@ -80,9 +82,8 @@ CREATE TABLE IF NOT EXISTS public.categories (
 
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Mọi người đều có thể xem danh mục" ON public.categories FOR SELECT USING (TRUE);
-CREATE POLICY "Admin có quyền chỉnh sửa danh mục" ON public.categories FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
-);
+CREATE POLICY "Admin có quyền chỉnh sửa danh mục" ON public.categories 
+    FOR ALL USING (public.is_admin(auth.uid()));
 
 
 -- 4. BẢNG SẢN PHẨM (PRODUCTS)
@@ -99,9 +100,9 @@ CREATE TABLE IF NOT EXISTS public.products (
 
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Mọi người đều có thể xem sản phẩm hoạt động" ON public.products 
-    FOR SELECT USING (status = 'active' OR EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin'));
+    FOR SELECT USING (status = 'active' OR public.is_admin(auth.uid()));
 CREATE POLICY "Admin có quyền quản lý sản phẩm" ON public.products 
-    FOR ALL USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin'));
+    FOR ALL USING (public.is_admin(auth.uid()));
 
 
 -- 5. BẢNG KHO KEY / TÀI KHOẢN (ITEMS)
@@ -117,12 +118,7 @@ CREATE TABLE IF NOT EXISTS public.items (
 
 ALTER TABLE public.items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Chỉ Admin mới có thể đọc ghi bảng items" ON public.items
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
-        )
-    );
+    FOR ALL USING (public.is_admin(auth.uid()));
 
 
 -- 6. BẢNG ĐƠN HÀNG (ORDERS)
@@ -148,12 +144,7 @@ CREATE POLICY "Người dùng xem đơn hàng của mình" ON public.orders
     );
 
 CREATE POLICY "Admin quản lý mọi đơn hàng" ON public.orders
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
-        )
-    );
+    FOR ALL USING (public.is_admin(auth.uid()));
 
 
 -- 7. DATABASE FUNCTION BÁN KEY BẢO MẬT (RPC)
