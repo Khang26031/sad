@@ -1,6 +1,27 @@
 -- SQL Script: Cấu hình Database cho Shop Bán Key/Tài Khoản Tự Động
 -- Hãy copy toàn bộ nội dung file này và chạy trong mục SQL Editor trên Supabase Dashboard.
 
+-- ================= CLEAN UP OLD POLICIES =================
+-- Việc này giúp tránh lỗi trùng lặp chính sách khi bạn chạy lại file SQL nhiều lần
+DROP POLICY IF EXISTS "Cho phép người dùng đọc thông tin của chính mình" ON public.profiles;
+DROP POLICY IF EXISTS "Cho phép người dùng cập nhật thông tin của chính mình" ON public.profiles;
+DROP POLICY IF EXISTS "Admin có toàn quyền trên profiles" ON public.profiles;
+
+DROP POLICY IF EXISTS "Admin có toàn quyền trên settings" ON public.settings;
+DROP POLICY IF EXISTS "Cho phép khách xem thông tin công khai" ON public.settings;
+
+DROP POLICY IF EXISTS "Mọi người đều có thể xem danh mục" ON public.categories;
+DROP POLICY IF EXISTS "Admin có quyền chỉnh sửa danh mục" ON public.categories;
+
+DROP POLICY IF EXISTS "Mọi người đều có thể xem sản phẩm hoạt động" ON public.products;
+DROP POLICY IF EXISTS "Admin có quyền quản lý sản phẩm" ON public.products;
+
+DROP POLICY IF EXISTS "Chỉ Admin mới có thể đọc ghi bảng items" ON public.items;
+
+DROP POLICY IF EXISTS "Người dùng xem đơn hàng của mình" ON public.orders;
+DROP POLICY IF EXISTS "Admin quản lý mọi đơn hàng" ON public.orders;
+
+
 -- 1. BẢNG THÔNG TIN NGƯỜI DÙNG (PROFILES)
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
@@ -51,7 +72,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-CREATE OR REPLACE TRIGGER on_auth_user_created
+-- Xóa trigger cũ nếu tồn tại trước khi tạo mới để tránh lỗi
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
