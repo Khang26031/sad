@@ -1,0 +1,1 @@
+{`n  "cleanUrls": true,`n  "rewrites": [`n    {`n      "source": "/api/check-payment",`n      "destination": "/api/check_payment.py"`n    }`n  ]`n}

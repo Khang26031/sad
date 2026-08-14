@@ -1,0 +1,683 @@
+import base64
+import datetime
+import hashlib
+import typing
+
+import aiohttp
+
+from mbbank.base import MBBankBase
+from mbbank.capcha_ocr import CapchaProcessing
+from mbbank.encryption_backend import EncryptionBackend
+from mbbank.errors import (
+    BankNotFoundError,
+    CapchaError,
+    CryptoVerifyError,
+    MBBankAPIError,
+)
+from mbbank.modals import (
+    AccountByPhoneResponseModal,
+    AccountNameResponseModal,
+    AccountTransfer,
+    ATMAccountNameResponseModal,
+    ATMCardIDResponseModal,
+    BalanceLoyaltyResponseModal,
+    BalanceResponseModal,
+    Bank,
+    BankListResponseModal,
+    BeneficiaryListResponseModal,
+    BulkPaymentDetailResponseModal,
+    BulkPaymentStatusResponseModal,
+    CardListResponseModal,
+    CardTransactionsResponseModal,
+    InterestRateResponseModal,
+    LoanListResponseModal,
+    SavedBeneficiaryListResponseModal,
+    SavingDetailResponseModal,
+    SavingListResponseModal,
+    ServiceTokenResponseModal,
+    TransactionHistoryResponseModal,
+    UserInfoResponseModal,
+)
+
+from .bulk_transfer import BulkTransferContextAsync
+from .transfer import TransferContextAsync
+
+
+class MBBankAsync(MBBankBase):
+    """Core Async class
+
+    Attributes:
+        deviceIdCommon (str): Device id common
+        sessionId (str or None): Current Session id
+
+    Args:
+        username (str): MBBank Account Username
+        password (str): MBBank Account Password
+        proxy (str, optional): Proxy url. Example: "http://127.0.0.1:8080". Defaults to None.
+        ocr_class (CapchaProcessing, optional): CapchaProcessing class. Defaults to CapchaOCR().
+        retry_times (int, optional): number of retry times for capcha processing. Defaults to 30 ( worst case ).
+        timeout (Union[float, Tuple[float, float]], optional): request timeout in seconds or
+        (connect timeout, read timeout) or None for no timeout. Defaults to None.
+    """
+
+    def __init__(
+        self,
+        *,
+        username: str,
+        password: str,
+        proxy: typing.Optional[str] = None,
+        ocr_class: typing.Optional[CapchaProcessing] = None,
+        encryption_backend: typing.Optional[EncryptionBackend] = None,
+        retry_times: int = 30,
+        timeout: float | tuple[float, float] | None = None,
+    ):
+        super().__init__(
+            username=username,
+            password=password,
+            ocr_class=ocr_class,
+            encryption_backend=encryption_backend,
+            retry_times=retry_times,
+        )
+        if proxy is not None:
+            self.proxy = proxy
+        else:
+            self.proxy = None
+        if timeout is not None:
+            if isinstance(timeout, tuple) and len(timeout) == 2:
+                self.timeout = aiohttp.ClientTimeout(connect=timeout[0], sock_read=timeout[1])
+            elif isinstance(timeout, (int, float)):
+                self.timeout = aiohttp.ClientTimeout(total=timeout)
+        else:
+            self.timeout = None
+
+    def _create_session(self) -> aiohttp.ClientSession:
+        return aiohttp.ClientSession(timeout=self.timeout)
+
+    async def get_capcha_image(self) -> bytes:
+        """
+        Get capcha image as bytes
+
+        Returns:
+            success (bytes): capcha image as bytes
+        """
+        rid = f"{self._userid}-{self._get_now_time()}"
+        json_data = {
+            "sessionId": "",
+            "refNo": rid,
+            "deviceIdCommon": self.deviceIdCommon,
+        }
+        headers = self.HEADERS_DEFAULT.copy()
+        headers["X-Request-Id"] = rid
+        headers["Deviceid"] = self.deviceIdCommon
+        headers["Refno"] = rid
+        async with (
+            self._create_session() as s,
+            s.post(
+                "https://online.mbbank.com.vn/api/retail-internetbankingms/getCaptchaImage",
+                headers=headers,
+                json=json_data,
+                proxy=self.proxy,
+            ) as r,
+        ):
+            data_out = await r.json()
+            return base64.b64decode(data_out["imageString"])
+
+    async def login(self, captcha_text: str):
+        """
+        Login to MBBank account
+
+        Args:
+            captcha_text (str): capcha text from capcha image
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        payload = {
+            "userId": self._userid,
+            "password": hashlib.md5(self._password.encode()).hexdigest(),
+            "captcha": captcha_text,
+            "sessionId": "",
+            "refNo": f"{self._userid}-{self._get_now_time()}",
+            "deviceIdCommon": self.deviceIdCommon,
+            "ibAuthen2faString": self.FPR,
+        }
+        data_encrypt = await self.encryption_backend._encrypt_async(payload)
+        async with (
+            self._create_session() as s,
+            s.post(
+                "https://online.mbbank.com.vn/api/retail_web/internetbanking/v2.0/doLogin",
+                headers=self.HEADERS_DEFAULT,
+                json={"dataEnc": data_encrypt},
+                proxy=self.proxy,
+            ) as r,
+        ):
+            if r.status == 428:
+                raise CryptoVerifyError(await r.text(), r.content_type)
+            data_out = await r.json()
+        if data_out["result"]["ok"]:
+            self.sessionId = data_out["sessionId"]
+            data_out.pop("result", None)
+            self._userinfo = data_out
+            await self._verify_biometric_check()
+            return
+        raise MBBankAPIError(data_out["result"])
+
+    async def _verify_biometric_check(self):
+        await self._req("https://online.mbbank.com.vn/api/retail-go-ekycms/v1.0/verify-biometric-nfc-transaction")
+
+    async def _authenticate(self):
+        try_count = 0
+        while try_count < self.retry_times:
+            try_count += 1
+            self._userinfo = None
+            self.sessionId = None
+            img_bytes = await self.get_capcha_image()
+            text = await self.ocr_class.process_image_async(img_bytes)
+            try:
+                await self.login(text)
+                return
+            except MBBankAPIError as e:
+                if e.code == "GW283":
+                    continue  # capcha error, try again
+                raise e
+        raise CapchaError(f"Exceeded maximum retry times for capcha processing ({self.retry_times})")
+
+    async def _req(self, url, *, json=None, headers=None, encrypt: bool = False) -> dict[str, typing.Any]:
+        if headers is None:
+            headers = {}
+        if json is None:
+            json = {}
+        while True:
+            if self.sessionId is None:
+                await self._authenticate()
+            rid = f"{self._userid}-{self._get_now_time()}"
+            json_data = {
+                "sessionId": self.sessionId if self.sessionId is not None else "",
+                "refNo": rid,
+                "deviceIdCommon": self.deviceIdCommon,
+            }
+            json_data.update(json)
+            headers.update(self.HEADERS_DEFAULT)
+            headers["X-Request-Id"] = rid
+            headers["RefNo"] = rid
+            headers["DeviceId"] = self.deviceIdCommon
+            if encrypt:
+                data_encrypt = await self.encryption_backend._encrypt_async(json_data)
+                json_data = {"dataEnc": data_encrypt}
+            async with (
+                self._create_session() as s,
+                s.post(
+                    url,
+                    headers=headers,
+                    json=json_data,
+                    proxy=self.proxy,
+                    timeout=self.timeout,
+                ) as r,
+            ):
+                if r.status == 428:
+                    raise CryptoVerifyError(await r.text(), r.content_type)
+                data_out = await r.json()
+            if data_out["result"] is None:
+                await self.getBalance()
+            # Some endpoints return {"result": {"ok": true}}, others return {"result": {"result": true}}
+            elif data_out["result"].get("ok", False) or data_out["result"].get("result", False):
+                data_out.pop("result", None)
+                break
+            elif data_out["result"]["responseCode"] == "GW200":
+                await self._authenticate()
+            else:
+                raise MBBankAPIError(data_out["result"])
+        return data_out
+
+    async def getTransactionAccountHistory(
+        self,
+        *,
+        accountNo: typing.Optional[str] = None,
+        from_date: datetime.datetime,
+        to_date: datetime.datetime,
+    ) -> TransactionHistoryResponseModal:
+        """
+        Get account transaction history
+
+        Args:
+            accountNo (str, optional): Sub account number Defaults to Main Account number.
+            from_date (datetime.datetime): transaction from date
+            to_date (datetime.datetime): transaction to date
+
+        Returns:
+            success (TransactionHistoryResponseModal): account transaction history
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        if self._userinfo is None:
+            await self._authenticate()
+        json_data = {
+            "accountNo": self._userid if accountNo is None else accountNo,
+            "fromDate": from_date.strftime("%d/%m/%Y"),
+            "toDate": to_date.strftime("%d/%m/%Y"),  # max 3 months
+        }
+        data_out = await self._req(
+            "https://online.mbbank.com.vn/api/retail-transactionms/transactionms/get-account-transaction-history",
+            json=json_data,
+        )
+        return TransactionHistoryResponseModal.model_validate(data_out, strict=True)
+
+    async def getBalance(self) -> BalanceResponseModal:
+        """
+        Get all main account and subaccount balance
+
+        Returns:
+            success (BalanceResponseModal): balance model
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        if self._userinfo is None:
+            await self._authenticate()
+        data_out = await self._req("https://online.mbbank.com.vn/api/retail-accountms/accountms/getBalance")
+        return BalanceResponseModal.model_validate(data_out, strict=True)
+
+    async def getBalanceLoyalty(self) -> BalanceLoyaltyResponseModal:
+        """
+        Get Account loyalty rank and Member loyalty point
+
+        Returns:
+            success (BalanceLoyaltyResponseModal): loyalty balance model
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        data_out = await self._req("https://online.mbbank.com.vn/api/retail_web/loyalty/getBalanceLoyalty")
+        return BalanceLoyaltyResponseModal.model_validate(data_out, strict=True)
+
+    async def getInterestRate(self, currency: str = "VND") -> InterestRateResponseModal:
+        """
+        Get saving interest rate
+
+        Args:
+            currency (str, optional): currency ISO 4217 format. Defaults to "VND" (Vietnam Dong).
+
+        Returns:
+            success (InterestRateResponseModal): interest rate
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        json_data = {"productCode": "TIENGUI.KHN.EMB", "currency": currency}
+        data_out = await self._req(
+            "https://online.mbbank.com.vn/api/retail_web/saving/getInterestRate",
+            json=json_data,
+        )
+        return InterestRateResponseModal.model_validate(data_out, strict=True)
+
+    async def getFavorBeneficiaryList(
+        self,
+        *,
+        transactionType: typing.Literal["TRANSFER", "PAYMENT"],
+        searchType: typing.Literal["MOST", "LATEST"],
+    ) -> BeneficiaryListResponseModal:
+        """
+        Get all favor or most transfer beneficiary list from your account
+
+        Args:
+            transactionType (Literal["TRANSFER", "PAYMENT"]): transaction type
+            searchType (Literal["MOST", "LATEST"]): search type
+
+        Returns:
+            success (BeneficiaryListResponseModal): favor beneficiary list
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        json_data = {"transactionType": transactionType, "searchType": searchType}
+        data_out = await self._req(
+            "https://online.mbbank.com.vn/api/retail_web/internetbanking/getFavorBeneficiaryList",
+            json=json_data,
+        )
+        return BeneficiaryListResponseModal.model_validate(data_out, strict=True)
+
+    async def getCardList(self) -> CardListResponseModal:
+        """
+        Get all card list from your account
+
+        Returns:
+            success (CardListResponseModal): card list
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        data_out = await self._req("https://online.mbbank.com.vn/api/retail_web/card/getList")
+        return CardListResponseModal.model_validate(data_out, strict=True)
+
+    async def getSavingList(self) -> SavingListResponseModal:
+        """
+        Get all saving list from your account
+
+        Returns:
+            success (SavingListResponseModal): saving list
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        data_out = await self._req("https://online.mbbank.com.vn/api/retail-savingms/saving/v3.0/getList")
+        return SavingListResponseModal.model_validate(data_out, strict=True)
+
+    async def getSavingDetail(self, accNo: str, accType: typing.Literal["OSA", "SBA"]) -> SavingDetailResponseModal:
+        """
+        Get saving detail by account number
+
+        Args:
+            accNo (str): saving account number
+            accType (Literal["OSA", "SBA"]): saving account type | OSA: Online Saving Account, SBA: Saving Bank Account
+
+        Returns:
+            success (SavingDetailResponseModal): saving detail
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        json_data = {"accNo": accNo, "accType": accType}
+        data_out = await self._req(
+            "https://online.mbbank.com.vn/api/retail_web/saving/getDetail",
+            json=json_data,
+        )
+        return SavingDetailResponseModal.model_validate(data_out, strict=True)
+
+    async def getLoanList(self) -> LoanListResponseModal:
+        """
+        Get all loan list from your account
+
+        Returns:
+            success (LoanListResponseModal): loan list
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        data_out = await self._req("https://online.mbbank.com.vn/api/retail-onlineloanms/loan/getList")
+        return LoanListResponseModal.model_validate(data_out, strict=True)
+
+    async def getCardTransactionHistory(
+        self, cardNo: str, from_date: datetime.datetime, to_date: datetime.datetime
+    ) -> CardTransactionsResponseModal:
+        """
+        Get card transaction history
+
+        Args:
+            cardNo (str): card number get from getCardList
+            from_date (datetime.datetime): from date
+            to_date (datetime.datetime): to date
+
+        Returns:
+            success (CardTransactionsResponseModal): card transaction history
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        json_data = {
+            "accountNo": cardNo,
+            "fromDate": from_date.strftime("%d/%m/%Y"),
+            "toDate": to_date.strftime("%d/%m/%Y"),  # max 3 months
+            "historyNumber": "",
+            "historyType": "DATE_RANGE",
+            "type": "CARD",
+        }
+        data_out = await self._req(
+            "https://online.mbbank.com.vn/api/retail_web/common/getTransactionHistory",
+            json=json_data,
+        )
+        return CardTransactionsResponseModal.model_validate(data_out, strict=True)
+
+    async def getBankList(self) -> BankListResponseModal:
+        """
+        Get transfer all bank list
+
+        Returns:
+            success (BankListResponseModal): bank list
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        # use cache as bank list doesn't change often (mirror sync behavior)
+        if "bank_list" in self._temp:
+            return BankListResponseModal.model_validate(self._temp["bank_list"], strict=True)
+        data_out = await self._req("https://online.mbbank.com.vn/api/retail_web/common/getBankList")
+        self._temp["bank_list"] = data_out
+        return BankListResponseModal.model_validate(data_out, strict=True)
+
+    async def getAccountByPhone(self, phone: str) -> AccountByPhoneResponseModal:
+        """
+        Get transfer account info by phone (MBank internal account only)
+
+        Args:
+            phone (str): MBBank account phone number
+
+        Returns:
+            success (AccountByPhoneResponseModal): account info
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        json_data = {"phone": phone}
+        data_out = await self._req(
+            "https://online.mbbank.com.vn/api/retail_web/common/getAccountByPhone",
+            json=json_data,
+        )
+        return AccountByPhoneResponseModal.model_validate(data_out, strict=True)
+
+    async def getServiceToken(self) -> ServiceTokenResponseModal:
+        """
+        Get service token for external service usage
+
+        Returns:
+            success (ServiceTokenResponseModal): service token
+        """
+        if self._userinfo is None:
+            await self._authenticate()
+        data_out = await self._req("https://online.mbbank.com.vn/api/retail_web/common/getServiceToken")
+        return ServiceTokenResponseModal.model_validate(data_out, strict=True)
+
+    async def getSavedBeneficiary(self) -> SavedBeneficiaryListResponseModal:
+        """
+        Get all saved beneficiary list from your account.
+
+        Returns:
+            success (SavedBeneficiaryListResponseModal): saved beneficiary list
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        json_data = {"type": "TRANSFER"}
+        data_out = await self._req(
+            "https://online.mbbank.com.vn/api/retail_web/common/getBeneficiary",
+            json=json_data,
+        )
+        return SavedBeneficiaryListResponseModal.model_validate(data_out, strict=True)
+
+    async def getAccountName(self, accountNo: str, bankCode: str, debitAccount: str) -> AccountNameResponseModal:
+        """
+        Get account name by account number
+
+        Args:
+            accountNo (str): account number that you want to get name
+            bankCode (str): bank code get from getBankList
+            debitAccount (str): your account number to transfer from
+
+        Returns:
+            success (AccountNameResponseModal): account obj
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        json_data = {
+            "creditAccount": accountNo,
+            "creditAccountType": "ACCOUNT",
+            "bankCode": bankCode,
+            "debitAccount": debitAccount,
+            "remark": "",
+        }
+        data_out = await self._req(
+            "https://online.mbbank.com.vn/api/retail_web/transfer/v1.0/inquiry-account-name",
+            json=json_data,
+        )
+        return AccountNameResponseModal.model_validate(data_out, strict=True)
+
+    async def getATMCardID(self, cardNumber: str) -> ATMCardIDResponseModal:
+        """
+        Get ATM Card ID by card number
+
+        Args:
+            cardNumber (str): card number
+
+        Returns:
+            success (ATMCardIDResponseModal): ATM Card ID response
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        service_token = await self.getServiceToken()
+        headers = self.HEADERS_DEFAULT.copy()
+        headers["authorization"] = service_token.type + " " + service_token.token
+        json_data = {
+            "cardNumber": cardNumber,
+            "requestID": f"{self._userid}-{self._get_now_time()}",
+        }
+        async with (
+            self._create_session() as s,
+            s.post(
+                "https://mbcard.mbbank.com.vn:8446/mbcardgw/internet/cardinfo/v1_0/generateid",
+                headers=headers,
+                json=json_data,
+                proxy=self.proxy,
+                timeout=self.timeout,
+            ) as r,
+        ):
+            data_out = await r.json()
+        return ATMCardIDResponseModal.model_validate(data_out, strict=True)
+
+    async def getATMAccountName(self, cardNumber: str, debitAccount: str) -> ATMAccountNameResponseModal:
+        """
+        Get ATM Account Name by card number
+
+        Args:
+            cardNumber (str): card number
+            debitAccount (str): your account number to transfer from
+
+        Returns:
+            success (ATMAccountNameResponseModal): ATM Account Name response
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        card_id = await self.getATMCardID(cardNumber=cardNumber)
+        if card_id.errorInfo.code != "000":
+            raise MBBankAPIError(
+                {
+                    "responseCode": card_id.errorInfo.code,
+                    "message": card_id.errorInfo.message,
+                }
+            )
+        bank_list = await self.getBankList()
+        bank_info: typing.Optional[Bank] = None
+        for bank in bank_list.listBank:
+            if cardNumber.startswith(bank.smlCode):
+                bank_info = bank
+                break
+        if bank_info is None:
+            raise BankNotFoundError("ATM Card Bank not found in bank list")
+        json_data = {
+            "creditAccount": card_id.cardID,
+            "bankCode": bank_info.smlCode,
+            "type": bank_info.typeTransfer,
+            "creditAccountType": "CARD",
+            "creditCardNo": cardNumber,
+            "debitAccount": debitAccount,
+            "remark": "",
+        }
+        data_out = await self._req(
+            "https://online.mbbank.com.vn/api/retail_web/transfer/inquiryAccountName",
+            json=json_data,
+        )
+        return ATMAccountNameResponseModal.model_validate(data_out, strict=True)
+
+    async def userinfo(self) -> UserInfoResponseModal:
+        """
+        Get current user info
+
+        Returns:
+            success (UserInfoResponseModal): user info
+
+        Raises:
+            MBBankAPIError: if api response not ok
+        """
+        if self._userinfo is None:
+            await self._authenticate()
+        return UserInfoResponseModal.model_validate(self._userinfo, strict=True)
+
+    async def makeBulkTransfer(
+        self,
+        *,
+        dest_accounts: list[AccountTransfer],
+        description: str,
+        src_account: str,
+        bulk_file_name: str = "Chuyenkhoantheobangke.xlsx",
+    ) -> "BulkTransferContextAsync":
+        """
+        Make bulk transfer from src_account to multiple dest_accounts
+        Note: If you open an account online, you need to verify with MBBank staff to use this feature, please go to the nearest MBBank branch to verify.
+
+        Args:
+            dest_accounts (list[AccountTransfer]): list of destination account info for bulk transfer
+            description (str): description for the transfer, this will be the description of the bulk transfer
+            src_account (str): Source account number
+            bulk_file_name (str): bulk file name for the transfer file, this will log into bulk transfer detail, default to "Chuyenkhoantheobangke.xlsx"
+        Returns:
+            BulkTransferContextAsync: bulk transfer context
+        """
+        context = BulkTransferContextAsync(
+            self,
+            dest_accounts=dest_accounts,
+            description=description,
+            src_account=src_account,
+            bulk_file_name=bulk_file_name,
+        )
+        return await context.start()
+
+    async def getBulkPaymentStatus(self) -> BulkPaymentStatusResponseModal:
+        data_out = await self._req("https://online.mbbank.com.vn/api/retail-bulkpaymentms/getBulkPaymentStatus")
+        return BulkPaymentStatusResponseModal.model_validate(data_out, strict=True)
+
+    async def getBulkPaymentDetail(self, bulk_id: str) -> BulkPaymentDetailResponseModal:
+        json_data = {"bulkId": bulk_id}
+        data_out = await self._req(
+            "https://online.mbbank.com.vn/api/retail-bulkpaymentms/getBulkPaymentDetail",
+            json=json_data,
+        )
+        return BulkPaymentDetailResponseModal.model_validate(data_out, strict=True)
+
+    async def makeTransfer(
+        self,
+        *,
+        src_account: str,
+        dest_account: str,
+        bank_code: str,
+        amount: int,
+        message: str,
+    ) -> "TransferContextAsync":
+        """
+        Make a transfer from src_account to dest_account
+
+        Args:
+            src_account (str): Source account number
+            dest_account (str): Destination account number
+            bank_code (str): Bank code of the destination account get from getBankList eg "MB".
+            amount (int): Amount to transfer
+            message (str): Transfer message
+        """
+        context = TransferContextAsync(
+            self,
+            src_account=src_account,
+            dest_account=dest_account,
+            bank_code=bank_code,
+            amount=amount,
+            message=message,
+        )
+        return await context.start()

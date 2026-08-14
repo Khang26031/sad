@@ -1,0 +1,41 @@
+[project]
+name = "mbbank-lib"
+# version is dynamic (sourced from the package)
+dynamic = ["version"]
+description = "A unofficially lightweight Python API wrapper for the \"Military Commercial Joint Stock Bank\" (MBBank) personal accounts"
+readme = { file = "README.MD", content-type = "text/markdown" }
+# Raise python base limit to 3.10 because of the use of some features like pattern matching and type hinting improvements
+requires-python = ">=3.10"
+license-files = ["LICENSE"]
+authors = [{ name = "The DT", email = "duongtuan30306@gmail.com" }]
+license = "MIT"
+
+dependencies = [
+    "Pillow==12.3.0",
+    "requests==2.34.2",
+    "aiohttp==3.14.3",
+    "mb-capcha-ocr==0.1.6",
+    "pydantic==2.13.4",
+    "cryptography==49.0.0",
+]
+
+[project.optional-dependencies]
+wasm = [
+    "wasmtime==47.0.1"
+]
+
+[project.urls]
+Homepage = "https://github.com/thedtvn/MBBank"
+
+[tool.setuptools.packages.find]
+include = ["mbbank", "mbbank.*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "mbbank.__version__" }
+
+[dependency-groups]
+dev = [
+    "pdoc==16.0.0", # for documentation generation
+    "ruff==0.16.1", # for linting and formatting
+    "ty==0.0.65" # for type checking
+]

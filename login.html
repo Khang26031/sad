@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng nhập / Đăng ký - SHOPBANHANG</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+  <div class="navbar">
+    <div class="logo" onclick="location.href='/'">🛒 SHOPBANHANG</div>
+    <ul class="nav-links">
+      <li><a href="/" class="nav-link">Cửa Hàng</a></li>
+      <li><a href="/login" class="nav-link active" id="nav-auth-link">Đăng Nhập</a></li>
+    </ul>
+  </div>
+
+  <div class="auth-wrapper">
+    <div class="glass-panel auth-card">
+      
+      <!-- Tab Selection -->
+      <div style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+        <button id="tab-login" class="nav-link active" style="background: none; border: none; font-size: 1.1rem; font-weight: 700; cursor: pointer; color: var(--text-primary);">Đăng Nhập</button>
+        <button id="tab-register" class="nav-link" style="background: none; border: none; font-size: 1.1rem; font-weight: 700; cursor: pointer; color: var(--text-secondary);">Đăng Ký</button>
+      </div>
+
+      <div class="auth-header">
+        <h2 id="auth-title">Đăng Nhập Tài Khoản</h2>
+        <p id="auth-subtitle">Chào mừng bạn quay trở lại với hệ thống bán key tự động.</p>
+      </div>
+
+      <!-- Error / Success Alert -->
+      <div id="auth-alert" class="badge d-none" style="width: 100%; padding: 0.75rem; margin-bottom: 1rem; text-align: center; border-radius: 8px;"></div>
+
+      <!-- Login Form -->
+      <form id="auth-form">
+        <div class="form-group">
+          <label class="form-label" for="email">Địa chỉ Email</label>
+          <input type="email" id="email" class="form-control" placeholder="name@example.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Mật khẩu</label>
+          <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+        </div>
+        <button type="submit" id="auth-submit-btn" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.75rem; margin-top: 0.5rem;">
+          Đăng Nhập
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- Supabase CDN Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/config.js"></script>
+  <script>
+    const { createClient } = supabase;
+    const supabaseClient = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
+
+    const tabLogin = document.getElementById('tab-login');
+    const tabRegister = document.getElementById('tab-register');
+    const authTitle = document.getElementById('auth-title');
+    const authSubtitle = document.getElementById('auth-subtitle');
+    const authSubmitBtn = document.getElementById('auth-submit-btn');
+    const authForm = document.getElementById('auth-form');
+    const authAlert = document.getElementById('auth-alert');
+
+    let mode = 'login'; // 'login' or 'register'
+
+    // Switch Tabs
+    tabLogin.addEventListener('click', () => {
+      mode = 'login';
+      tabLogin.classList.add('active');
+      tabLogin.style.color = 'var(--text-primary)';
+      tabRegister.classList.remove('active');
+      tabRegister.style.color = 'var(--text-secondary)';
+      authTitle.innerText = 'Đăng Nhập Tài Khoản';
+      authSubtitle.innerText = 'Chào mừng bạn quay trở lại với hệ thống bán key tự động.';
+      authSubmitBtn.innerText = 'Đăng Nhập';
+      hideAlert();
+    });
+
+    tabRegister.addEventListener('click', () => {
+      mode = 'register';
+      tabRegister.classList.add('active');
+      tabRegister.style.color = 'var(--text-primary)';
+      tabLogin.classList.remove('active');
+      tabLogin.style.color = 'var(--text-secondary)';
+      authTitle.innerText = 'Đăng Ký Tài Khoản';
+      authSubtitle.innerText = 'Tạo tài khoản mới để bắt đầu mua sắm và quản lý key đã mua.';
+      authSubmitBtn.innerText = 'Đăng Ký';
+      hideAlert();
+    });
+
+    function showAlert(msg, type='error') {
+      authAlert.innerText = msg;
+      authAlert.className = `badge badge-${type === 'error' ? 'failed' : 'completed'}`;
+      authAlert.style.display = 'block';
+    }
+
+    function hideAlert() {
+      authAlert.style.display = 'none';
+    }
+
+    // Handle Form Submit
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      authSubmitBtn.disabled = true;
+      authSubmitBtn.innerText = mode === 'login' ? 'Đang đăng nhập...' : 'Đang đăng ký...';
+
+      try {
+        if (mode === 'login') {
+          const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+
+          // Fetch user profile to check role
+          const { data: profile, error: profileErr } = await supabaseClient
+            .from('profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single();
+
+          if (profileErr) throw profileErr;
+
+          showAlert('Đăng nhập thành công! Đang chuyển hướng...', 'success');
+          
+          setTimeout(() => {
+            if (profile.role === 'admin') {
+              location.href = '/admin';
+            } else {
+              location.href = '/';
+            }
+          }, 1000);
+
+        } else {
+          // Register
+          const { data, error } = await supabaseClient.auth.signUp({ email, password });
+          if (error) throw error;
+
+          showAlert('Đăng ký thành công! Hãy kiểm tra hộp thư email (nếu có yêu cầu xác thực) hoặc đăng nhập ngay lập tức.', 'success');
+          mode = 'login';
+          tabLogin.click();
+        }
+      } catch (err) {
+        showAlert(err.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+      } finally {
+        authSubmitBtn.disabled = false;
+        authSubmitBtn.innerText = mode === 'login' ? 'Đăng Nhập' : 'Đăng Ký';
+      }
+    });
+
+    // Check if user is already logged in
+    async function checkSession() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session) {
+        const { data: profile } = await supabaseClient
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profile && profile.role === 'admin') {
+          location.href = '/admin';
+        } else {
+          location.href = '/';
+        }
+      }
+    }
+    checkSession();
+  </script>
+</body>
+</html>
