@@ -1,1 +1,9 @@
-{`n  "cleanUrls": true,`n  "rewrites": [`n    {`n      "source": "/api/check-payment",`n      "destination": "/api/check_payment.py"`n    }`n  ]`n}
+{
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/check-payment",
+      "destination": "/api/check_payment.py"
+    }
+  ]
+}
