@@ -78,8 +78,11 @@ class handler(BaseHTTPRequestHandler):
 
             mb = mbbank.MBBank(username=mb_user, password=mb_pass)
 
-            to_date = datetime.datetime.now()
-            from_date = to_date - datetime.timedelta(hours=2) # Check last 2 hours is faster and sufficient
+            # Cấu hình múi giờ GMT+7 (Việt Nam) bắt buộc cho máy chủ Vercel (chạy UTC mặc định)
+            tz_vn = datetime.timezone(datetime.timedelta(hours=7))
+            to_date = datetime.datetime.now(tz_vn)
+            # Quét rộng ra 1 ngày để đảm bảo không bị hụt múi giờ
+            from_date = to_date - datetime.timedelta(days=1)
 
             history = mb.getTransactionAccountHistory(
                 accountNo=mb_account, 
