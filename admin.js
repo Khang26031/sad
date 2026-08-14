@@ -1,4 +1,31 @@
-// admin.js for LEGION STORE
+
+window.showToast = function(message, type = 'info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; max-width: 350px; width: calc(100% - 40px);';
+    document.body.appendChild(container);
+  }
+
+  const card = document.createElement('div');
+  card.className = `toast-card toast-${type}`;
+  card.innerHTML = `
+    <span>${message}</span>
+    <button class="toast-close">&times;</button>
+  `;
+
+  const closeBtn = card.querySelector('.toast-close');
+  const closeToast = () => {
+    card.style.animation = 'toastSlideOut 0.3s ease forwards';
+    setTimeout(() => { card.remove(); }, 300);
+  };
+  closeBtn.onclick = closeToast;
+
+  setTimeout(closeToast, 4000);
+  container.appendChild(card);
+};
+\n// admin.js for LEGION STORE
 const { createClient } = supabase;
 const supabaseClient = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
 
@@ -21,7 +48,7 @@ async function checkAdminAuth() {
     .single();
 
   if (error || !profile || profile.role !== 'admin') {
-    alert('Truy cập bị từ chối. Bạn không phải là Admin.');
+    showToast('Truy cập bị từ chối. Bạn không phải là Admin.', 'error');
     location.href = '/';
   } else {
     initAdminPanel();
@@ -118,9 +145,9 @@ async function handleCategoryCreate() {
     .insert({ name });
 
   if (error) {
-    alert('Lỗi tạo danh mục: ' + error.message);
+    showToast('Lỗi tạo danh mục: ' + error.message, 'error');
   } else {
-    alert('Tạo danh mục thành công!');
+    showToast('Tạo danh mục thành công!', 'success');
     catInput.value = '';
     loadCategories();
   }
@@ -219,19 +246,19 @@ async function handleProductSubmit(e) {
         .update(payload)
         .eq('id', editProductId);
       if (error) throw error;
-      alert('Cập nhật sản phẩm thành công!');
+      showToast('Cập nhật sản phẩm thành công!', 'success');
     } else {
       const { error } = await supabaseClient
         .from('products')
         .insert(payload);
       if (error) throw error;
-      alert('Đăng sản phẩm mới thành công!');
+      showToast('Đăng sản phẩm mới thành công!', 'success');
     }
 
     resetProductForm();
     loadProductsList();
   } catch (err) {
-    alert('Lỗi lưu sản phẩm: ' + err.message);
+    showToast('Lỗi lưu sản phẩm: ' + err.message, 'error');
   }
 }
 
@@ -272,7 +299,7 @@ function resetProductForm() {
 window.deleteProduct = async function(id) {
   if (!confirm('Bạn chắc chắn muốn xóa sản phẩm này? Tất cả các key liên quan trong kho cũng sẽ bị xóa.')) return;
   const { error } = await supabaseClient.from('products').delete().eq('id', id);
-  if (error) alert('Lỗi xóa sản phẩm: ' + error.message);
+  if (error) showToast('Lỗi xóa sản phẩm: ' + error.message, 'error');
   else loadProductsList();
 };
 
@@ -282,7 +309,7 @@ async function handleAddKeys() {
   const keysText = document.getElementById('keys-input').value.trim();
   
   if (!productId || !keysText) {
-    alert('Vui lòng chọn sản phẩm và nhập key.');
+    showToast('Vui lòng chọn sản phẩm và nhập key.', 'warning');
     return;
   }
 
@@ -298,9 +325,9 @@ async function handleAddKeys() {
   btn.innerText = 'Thêm Key Vào Kho';
 
   if (error) {
-    alert('Lỗi nạp key: ' + error.message);
+    showToast('Lỗi nạp key: ' + error.message, 'error');
   } else {
-    alert(`Nạp thành công ${rows.length} key vào kho!`);
+    showToast(`Nạp thành công ${rows.length} key vào kho!`, 'success');
     document.getElementById('keys-input').value = '';
     loadProductsList();
   }
@@ -408,7 +435,7 @@ async function handleAdminSubmitManualOrder() {
   const keyContent = document.getElementById('admin-modal-key-content').value.trim();
 
   if (!keyContent) {
-    alert('Vui lòng nhập kết quả key/tài khoản bàn giao.');
+    showToast('Vui lòng nhập kết quả key/tài khoản bàn giao.', 'warning');
     return;
   }
 
@@ -425,11 +452,11 @@ async function handleAdminSubmitManualOrder() {
 
     if (error) throw error;
     
-    alert('Cập nhật trạng thái và hoàn tất đơn cày thuê thành công!');
+    showToast('Đơn cày thuê đã hoàn thành!', 'success');
     closeAdminOrderModal();
     loadManualOrders();
   } catch (err) {
-    alert('Lỗi cập nhật đơn hàng: ' + err.message);
+    showToast('Lỗi cập nhật đơn hàng: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
     btn.innerText = 'Xác Nhận & Gửi';
@@ -477,14 +504,14 @@ async function loadDepositsList() {
 window.approveDeposit = async function(id) {
   if (!confirm('Bạn chắc chắn muốn duyệt hóa đơn nạp tiền này thủ công? Hệ thống sẽ cộng tiền cho người dùng.')) return;
   const { data, error } = await supabaseClient.rpc('process_deposit', { p_deposit_id: id });
-  if (error) alert('Lỗi duyệt nạp tiền: ' + error.message);
+  if (error) showToast('Lỗi duyệt nạp tiền: ' + error.message, 'error');
   else loadDepositsList();
 };
 
 window.deleteDeposit = async function(id) {
   if (!confirm('Bạn chắc chắn muốn xóa hóa đơn nạp này?')) return;
   const { error } = await supabaseClient.from('deposits').delete().eq('id', id);
-  if (error) alert('Lỗi xóa hóa đơn: ' + error.message);
+  if (error) showToast('Lỗi xóa hóa đơn: ' + error.message, 'error');
   else loadDepositsList();
 };
 
@@ -533,7 +560,7 @@ async function handleAdjustBalance() {
   const amount = parseFloat(amountStr);
 
   if (!userId || isNaN(amount)) {
-    alert('Vui lòng nhập UUID khách hàng và số tiền hợp lệ.');
+    showToast('Nhập UUID khách hàng và số tiền hợp lệ.', 'warning');
     return;
   }
 
@@ -545,19 +572,19 @@ async function handleAdjustBalance() {
 
     if (error) throw error;
 
-    alert('Cập nhật ví khách hàng thành công! Số dư mới: ' + formatVND(data));
+    showToast('Cập nhật ví khách hàng thành công!', 'success');
     document.getElementById('cust-id-input').value = '';
     document.getElementById('cust-amount-input').value = '';
     loadCustomersList();
   } catch (err) {
-    alert('Lỗi cập nhật ví: ' + err.message);
+    showToast('Lỗi cập nhật ví: ' + err.message, 'error');
   }
 }
 
 window.deleteCustomer = async function(id) {
   if (!confirm('Bạn chắc chắn muốn xóa tài khoản khách hàng này ra khỏi bảng profiles?')) return;
   const { error } = await supabaseClient.from('profiles').delete().eq('id', id);
-  if (error) alert('Lỗi xóa khách hàng: ' + error.message);
+  if (error) showToast('Lỗi xóa khách hàng: ' + error.message, 'error');
   else loadCustomersList();
 };
 
@@ -605,9 +632,9 @@ async function handleBankSettingsSubmit(e) {
     });
 
   if (error) {
-    alert('Lỗi lưu cấu hình bank: ' + error.message);
+    showToast('Lỗi lưu cấu hình bank: ' + error.message, 'error');
   } else {
-    alert('Cập nhật cấu hình tài khoản nhận tiền thành công!');
+    showToast('Cập nhật cấu hình tài khoản nhận tiền thành công!', 'success');
     loadBankSettings();
   }
 }

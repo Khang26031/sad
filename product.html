@@ -163,7 +163,34 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/config.js"></script>
   <script>
-    const { createClient } = supabase;
+    
+window.showToast = function(message, type = 'info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; max-width: 350px; width: calc(100% - 40px);';
+    document.body.appendChild(container);
+  }
+
+  const card = document.createElement('div');
+  card.className = `toast-card toast-${type}`;
+  card.innerHTML = `
+    <span>${message}</span>
+    <button class="toast-close">&times;</button>
+  `;
+
+  const closeBtn = card.querySelector('.toast-close');
+  const closeToast = () => {
+    card.style.animation = 'toastSlideOut 0.3s ease forwards';
+    setTimeout(() => { card.remove(); }, 300);
+  };
+  closeBtn.onclick = closeToast;
+
+  setTimeout(closeToast, 4000);
+  container.appendChild(card);
+};
+\nconst { createClient } = supabase;
     const supabaseClient = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
 
     let currentProduct = null;
@@ -291,7 +318,7 @@
     function openPurchaseModal() {
       if (!authSession) {
         // Enforce login
-        alert('Bạn cần đăng nhập tài khoản để thực hiện mua hàng bằng số dư.');
+        showToast('Bạn cần đăng nhập tài khoản để thực hiện mua hàng bằng số dư.', 'warning');
         location.href = '/login';
         return;
       }
@@ -359,7 +386,7 @@
       });
 
       if (!isValid) {
-        alert('Vui lòng điền đầy đủ thông tin biểu mẫu yêu cầu.');
+        showToast('Vui lòng điền đầy đủ thông tin biểu mẫu yêu cầu.', 'warning');
         return;
       }
 
@@ -387,7 +414,7 @@
         }
 
       } catch (err) {
-        alert('Giao dịch thất bại: ' + err.message);
+        showToast('Giao dịch thất bại: ' + err.message, 'error');
       } finally {
         payBalanceBtn.disabled = false;
         payBalanceBtn.innerText = 'Thanh Toán Bằng Số Dư';

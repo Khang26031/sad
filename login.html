@@ -110,7 +110,34 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/config.js"></script>
   <script>
-    const { createClient } = supabase;
+    
+window.showToast = function(message, type = 'info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; max-width: 350px; width: calc(100% - 40px);';
+    document.body.appendChild(container);
+  }
+
+  const card = document.createElement('div');
+  card.className = `toast-card toast-${type}`;
+  card.innerHTML = `
+    <span>${message}</span>
+    <button class="toast-close">&times;</button>
+  `;
+
+  const closeBtn = card.querySelector('.toast-close');
+  const closeToast = () => {
+    card.style.animation = 'toastSlideOut 0.3s ease forwards';
+    setTimeout(() => { card.remove(); }, 300);
+  };
+  closeBtn.onclick = closeToast;
+
+  setTimeout(closeToast, 4000);
+  container.appendChild(card);
+};
+\nconst { createClient } = supabase;
     const supabaseClient = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
 
     const tabLoginBtn = document.getElementById('tab-login-btn');
@@ -160,7 +187,7 @@
           location.href = '/';
         }
       } catch (err) {
-        alert('Đăng nhập thất bại: ' + (err.message || 'Sai tài khoản hoặc mật khẩu.'));
+        showToast('Đăng nhập thất bại: ' + (err.message || 'Sai tài khoản hoặc mật khẩu.'), 'error');
         submitBtn.disabled = false;
         submitBtn.innerText = 'Đăng Nhập';
       }
@@ -176,7 +203,7 @@
 
       // 1. Password Confirmation Check
       if (password !== confirmPassword) {
-        alert('Mật khẩu xác nhận không trùng khớp! Vui lòng kiểm tra lại.');
+        showToast('Mật khẩu xác nhận không trùng khớp! Vui lòng kiểm tra lại.', 'warning');
         return;
       }
 
@@ -187,12 +214,12 @@
         const { data, error } = await supabaseClient.auth.signUp({ email, password });
         if (error) throw error;
 
-        alert('Đăng ký thành công! Bạn có thể sử dụng tài khoản này để đăng nhập ngay.');
+        showToast('Đăng ký thành công! Đăng nhập ngay.', 'success');
         // Switch to login tab and prefill email
         document.getElementById('login-email').value = email;
         tabLoginBtn.click();
       } catch (err) {
-        alert('Đăng ký thất bại: ' + err.message);
+        showToast('Đăng ký thất bại: ' + err.message, 'error');
       } finally {
         submitBtn.disabled = false;
         submitBtn.innerText = 'Đăng Ký Tài Khoản';

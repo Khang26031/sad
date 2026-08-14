@@ -1,4 +1,31 @@
-// app.js for LEGION STORE
+
+window.showToast = function(message, type = 'info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; max-width: 350px; width: calc(100% - 40px);';
+    document.body.appendChild(container);
+  }
+
+  const card = document.createElement('div');
+  card.className = `toast-card toast-${type}`;
+  card.innerHTML = `
+    <span>${message}</span>
+    <button class="toast-close">&times;</button>
+  `;
+
+  const closeBtn = card.querySelector('.toast-close');
+  const closeToast = () => {
+    card.style.animation = 'toastSlideOut 0.3s ease forwards';
+    setTimeout(() => { card.remove(); }, 300);
+  };
+  closeBtn.onclick = closeToast;
+
+  setTimeout(closeToast, 4000);
+  container.appendChild(card);
+};
+\n// app.js for LEGION STORE
 const { createClient } = supabase;
 const supabaseClient = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
 
@@ -221,7 +248,7 @@ document.querySelector('.cat-btn[data-category="all"]').onclick = function() {
 // Purchase Modal Checkout flow
 window.openPurchaseModal = function(productId) {
   if (!authSession) {
-    alert('Bạn cần đăng nhập tài khoản để thực hiện mua hàng bằng số dư.');
+    showToast('Bạn cần đăng nhập tài khoản để thực hiện mua hàng bằng số dư.', 'warning');
     location.href = '/login';
     return;
   }
@@ -293,7 +320,7 @@ payBalanceBtn.onclick = async () => {
   });
 
   if (!isValid) {
-    alert('Vui lòng nhập đầy đủ các thông tin biểu mẫu yêu cầu.');
+    showToast('Vui lòng nhập đầy đủ các thông tin biểu mẫu yêu cầu.', 'warning');
     return;
   }
 
@@ -327,7 +354,7 @@ payBalanceBtn.onclick = async () => {
     await loadProducts();
 
   } catch (err) {
-    alert('Lỗi thanh toán: ' + err.message);
+    showToast('Lỗi thanh toán: ' + err.message, 'error');
   } finally {
     payBalanceBtn.disabled = false;
     payBalanceBtn.innerText = 'Thanh Toán Bằng Số Dư';
@@ -431,7 +458,7 @@ document.getElementById('deposit-amount-input').oninput = function() {
 // Confirm Deposit step 1 -> step 2
 document.getElementById('btn-confirm-deposit-init').onclick = async () => {
   if (selectedDepositAmount < 10000) {
-    alert('Số tiền nạp tối thiểu (Min Deposit) là 10.000 VNĐ.');
+    showToast('Số tiền nạp tối thiểu (Min Deposit) là 10.000 VNĐ.', 'warning');
     return;
   }
 
@@ -495,7 +522,7 @@ document.getElementById('btn-confirm-deposit-init').onclick = async () => {
     startDepositPolling(deposit.id);
 
   } catch (err) {
-    alert('Khởi tạo hóa đơn nạp thất bại: ' + err.message);
+    showToast('Khởi tạo hóa đơn nạp thất bại: ' + err.message, 'error');
   } finally {
     confirmBtn.disabled = false;
     confirmBtn.innerText = 'Xác Nhận Nạp Tiền';
@@ -524,7 +551,7 @@ function startDepositPolling(depositId) {
 
       if (data.status === 'success') {
         clearInterval(depositPollingInterval);
-        alert('Nạp tiền thành công! Số tiền đã được cộng vào tài khoản của bạn.');
+        showToast('Nạp tiền thành công! Số tiền đã được cộng vào tài khoản của bạn.', 'success');
         
         // Refresh balance in UI and local profile
         await checkAuthSession();
@@ -534,13 +561,13 @@ function startDepositPolling(depositId) {
         return true;
       } else {
         if (isManual) {
-          alert('Hệ thống chưa nhận được tiền hoặc đang chờ ngân hàng phản hồi. Vui lòng đợi 1-2 phút hoặc kiểm tra lại bill.');
+          showToast('Hệ thống chưa nhận được tiền hoặc đang chờ ngân hàng phản hồi. Vui lòng đợi 1-2 phút.', 'warning');
         }
       }
     } catch (err) {
       console.error('Error checking deposit:', err);
       if (isManual) {
-        alert('Lỗi kết nối tới hệ thống kiểm tra nạp tiền. Vui lòng thử lại sau.');
+        showToast('Lỗi kết nối tới hệ thống kiểm tra nạp tiền.', 'error');
       }
     } finally {
       if (isManual) {
