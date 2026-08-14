@@ -258,36 +258,74 @@ function startPolling(orderId) {
   if (orderPollingInterval) clearInterval(orderPollingInterval);
   
   const statusText = document.getElementById('payment-status-text');
+  const confirmBtn = document.getElementById('btn-confirm-payment');
+  const manualTip = document.getElementById('payment-manual-tip');
   let pollAttempts = 0;
 
-  orderPollingInterval = setInterval(async () => {
-    pollAttempts++;
-    statusText.innerText = `Đang chờ thanh toán (Đã quét ${pollAttempts * 3}s)...`;
+  // Reset UI
+  confirmBtn.disabled = false;
+  confirmBtn.innerText = 'Tôi Đã Chuyển Khoản';
+  manualTip.classList.add('d-none');
+
+  const checkPaymentOnce = async (isManual = false) => {
+    if (isManual) {
+      confirmBtn.disabled = true;
+      confirmBtn.innerText = 'Đang kiểm tra giao dịch...';
+    }
 
     try {
-      // Call Vercel Python serverless function check_payment
       const response = await fetch(`/api/check-payment?order_id=${orderId}`);
       const data = await response.json();
 
       if (data.status === 'success') {
         clearInterval(orderPollingInterval);
-        
-        // Deliver Key
         document.getElementById('delivered-key').innerText = data.key;
         stepPayment.classList.add('d-none');
         stepSuccess.classList.remove('d-none');
-        
-        // Refresh products list stocks
         await loadProducts();
+        return true;
       } else if (data.status === 'failed') {
         clearInterval(orderPollingInterval);
         statusText.innerText = data.message;
         alert(data.message);
+        return true;
+      } else {
+        if (isManual) {
+          alert('Hệ thống chưa nhận được tiền hoặc đang xử lý. Vui lòng đợi 1-2 phút hoặc kiểm tra lại bill chuyển khoản.');
+          manualTip.classList.remove('d-none');
+        }
       }
     } catch (err) {
-      console.error('Error polling payment status:', err);
+      console.error('Error checking payment:', err);
+      if (isManual) {
+        alert('Lỗi kết nối tới hệ thống kiểm tra thanh toán. Vui lòng thử lại sau.');
+      }
+    } finally {
+      if (isManual) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerText = 'Tôi Đã Chuyển Khoản';
+      }
     }
-  }, 3000); // Poll every 3 seconds
+    return false;
+  };
+
+  // Auto polling
+  orderPollingInterval = setInterval(async () => {
+    pollAttempts++;
+    statusText.innerText = `Đang chờ thanh toán (Đã quét ${pollAttempts * 3}s)...`;
+    
+    // Show manual fallback after 45 seconds of polling
+    if (pollAttempts >= 15) {
+      manualTip.classList.remove('d-none');
+    }
+    
+    await checkPaymentOnce(false);
+  }, 3000);
+
+  // Manual trigger button
+  confirmBtn.onclick = async () => {
+    await checkPaymentOnce(true);
+  };
 }
 
 finishBtn.onclick = () => {
