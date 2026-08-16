@@ -3,107 +3,110 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nạp Tiền - LEGION STORE</title>
+  <title>Nạp Tiền Tự Động - LEGION STORE</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/responsive.css">
 </head>
 <body>
-  <div id="drawer-overlay" class="drawer-overlay"></div>
-  <div id="mobile-drawer" class="mobile-drawer glass-panel">
-    <div class="drawer-header">
-      <h2>MENU</h2>
-      <button id="drawer-close" class="btn">&times;</button>
+
+  <!-- Navbar -->
+  <div class="navbar">
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <div class="hamburger-menu" id="hamburger-btn">&#9776;</div>
+      <div class="logo" onclick="location.href='/'">LEGION STORE</div>
     </div>
-    <div class="drawer-content">
-      <a href="/" class="drawer-item">Trang Chủ</a>
-      <a href="/deposit.html" class="drawer-item active">Nạp Tiền</a>
-      <a href="/history.html" class="drawer-item">Lịch Sử Mua Hàng</a>
-      <div id="drawer-balance-wrapper" class="drawer-item d-none" style="background: rgba(255,255,255,0.05);">
-        Số dư: <span id="drawer-user-balance" style="color: var(--accent-primary); font-weight: bold;">0 đ</span>
-      </div>
-      <button id="drawer-auth-btn" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Đăng Nhập</button>
-    </div>
+    <ul class="nav-links">
+      <li><a href="/" class="nav-link " id="nav-shop-link">Cửa Hàng</a></li>
+      <li><a href="/deposit.html" class="nav-link d-none active" id="nav-deposit-link">Nạp Tiền</a></li>
+      <li><a href="/history.html" class="nav-link d-none " id="nav-history-link">Lịch Sử Mua Hàng</a></li>
+      <li id="nav-balance-wrapper" class="d-none">
+        <div id="nav-user-balance" style="font-weight: 700; color: var(--success); padding: 0.5rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">Ví: 0đ</div>
+      </li>
+      <li><a href="/login.html" class="nav-link" id="nav-auth-btn">Đăng Nhập</a></li>
+    </ul>
   </div>
 
-  <header class="header glass-panel">
-    <div class="header-container">
-      <button id="hamburger-btn" class="hamburger-btn">
-        <span></span><span></span><span></span>
-      </button>
-      <div class="logo" onclick="location.href='/'" style="cursor:pointer;">LEGION STORE</div>
-      <nav class="nav-links desktop-only">
-        <a href="/">Trang Chủ</a>
-        <a href="/deposit.html" class="active">Nạp Tiền</a>
-        <a href="/history.html">Lịch Sử Mua Hàng</a>
-      </nav>
-      <div class="user-actions desktop-only">
-        <div id="user-info" class="d-none">
-          <span class="balance-badge">Số dư: <span id="nav-user-balance">0 đ</span></span>
-        </div>
-        <button id="auth-btn" class="btn btn-outline">Đăng Nhập</button>
-      </div>
+  <!-- Navigation Drawer (Mobile) -->
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <div class="nav-drawer" id="nav-drawer">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);">
+      <div class="logo">LEGION STORE</div>
+      <button id="drawer-close-btn" style="background: none; border: none; color: var(--text-secondary); font-size: 1.75rem; cursor: pointer; line-height: 1;">&times;</button>
     </div>
-  </header>
+    <ul style="list-style: none; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+      <li><a href="/" class="drawer-link " id="drawer-shop-link">Cửa Hàng</a></li>
+      <li><a href="/deposit.html" class="drawer-link d-none active" id="drawer-deposit-link">Nạp Tiền</a></li>
+      <li><a href="/history.html" class="drawer-link d-none " id="drawer-history-link">Lịch Sử Mua Hàng</a></li>
+      <li id="drawer-balance-wrapper" class="d-none" style="padding: 0.75rem 1rem;">
+        <div id="drawer-user-balance" style="font-weight: 700; color: var(--success); padding: 0.5rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px; text-align: center;">Ví: 0đ</div>
+      </li>
+      <li><a href="/login.html" class="drawer-link" id="drawer-auth-btn" style="background: var(--accent-primary); color: #fff; text-align: center; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">Đăng Nhập</a></li>
+    </ul>
+  </div>
 
-  <main style="max-width: 1000px; margin: 6rem auto 2rem auto; padding: 0 1rem;">
-    <h2 style="margin-bottom: 2rem; color: var(--accent-primary);">Nạp Tiền Tự Động</h2>
+
+  <div class="container" style="max-width: 1000px; margin: 2rem auto; padding: 0 1rem;">
+    <h2 style="margin-bottom: 2rem; color: var(--accent-primary); font-family: var(--font-display);">Nạp Tiền Tự Động</h2>
     
-    <div class="product-detail-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-bottom: 3rem;">
       
       <!-- Cột Tạo lệnh nạp -->
-      <div class="glass-panel" style="padding: 1.5rem;">
-        <h3 style="margin-bottom: 1rem;">Tạo Lệnh Nạp</h3>
+      <div class="glass-panel" style="padding: 1.5rem; border-radius: 16px;">
+        <h3 style="margin-bottom: 1.25rem;">Tạo Lệnh Nạp Tiền</h3>
         <div class="form-group">
-          <label class="form-label">Số tiền cần nạp (VNĐ)</label>
-          <input type="number" id="deposit-amount-input" class="form-control" placeholder="Ví dụ: 50000" min="10000">
+          <label class="form-label" style="display:block; margin-bottom: 0.5rem; color: var(--text-secondary);">Số tiền cần nạp (VNĐ)</label>
+          <input type="number" id="deposit-amount-input" class="form-control" placeholder="Ví dụ: 50000" min="10000" value="50000" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: #fff; font-size: 1.1rem;">
         </div>
-        <button id="btn-create-deposit" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;">Tạo Lệnh</button>
-        <p style="font-size: 0.85rem; color: var(--text-secondary);">* Hệ thống duyệt tự động trong 30s - 1 phút sau khi chuyển khoản thành công.</p>
+        <button id="btn-create-deposit" class="btn btn-primary" style="width: 100%; margin-top: 1.25rem; padding: 0.85rem; font-weight: 700;">Tạo Lệnh Nạp</button>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 1rem;">* Hệ thống tự động quét và cộng tiền sau khi bạn chuyển khoản thành công.</p>
       </div>
 
       <!-- Cột Thanh toán (QR) -->
-      <div class="glass-panel" style="padding: 1.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <div class="glass-panel" style="padding: 1.5rem; border-radius: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 350px;">
         <div id="deposit-waiting" style="color: var(--text-secondary);">
-          <p>Vui lòng nhập số tiền và Tạo lệnh nạp để lấy mã QR.</p>
+          <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">💳</div>
+          <p>Nhập số tiền và ấn <b>"Tạo Lệnh Nạp"</b> để nhận mã QR chuyển khoản.</p>
         </div>
         
         <div id="deposit-qr-section" class="d-none" style="width: 100%;">
-          <h3 style="color: var(--accent-primary); margin-bottom: 1rem;">Quét Mã QR (Lệnh có hiệu lực <span id="countdown-timer" style="color:var(--danger);">15:00</span>)</h3>
-          <img id="qr-image" src="" alt="QR Code" style="width: 250px; border-radius: 12px; margin-bottom: 1rem; border: 2px solid var(--border-color);">
-          <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; text-align: left; font-size: 0.9rem;">
-            <p>Ngân hàng: <b id="qr-bank-name">MBBank</b></p>
-            <p>Số TK: <b id="qr-acc-number">...</b></p>
-            <p>Chủ TK: <b id="qr-acc-name">...</b></p>
-            <p>Số tiền: <b id="qr-amount" style="color: var(--accent-primary);">0 đ</b></p>
-            <p>Nội dung: <b id="qr-memo" style="color: var(--accent-primary); user-select: all;">...</b></p>
+          <div style="font-weight: 700; color: var(--accent-primary); margin-bottom: 0.75rem;">
+            Lệnh nạp có hiệu lực: <span id="countdown-timer" style="color: var(--danger); font-size: 1.2rem;">15:00</span>
           </div>
-          <button id="btn-cancel-deposit" class="btn btn-outline" style="width: 100%; margin-top: 1rem;">Hủy Lệnh</button>
+          <img id="qr-image" src="" alt="Mã QR Chuyển Khoản" style="max-width: 220px; width: 100%; border-radius: 12px; margin: 0.5rem auto; border: 2px solid var(--border-color);">
+          
+          <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 10px; text-align: left; font-size: 0.9rem; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <div>Ngân hàng: <b id="qr-bank-name">MBBank</b></div>
+            <div>Số TK: <b id="qr-acc-number" style="user-select: all; color: var(--accent-secondary);">...</b></div>
+            <div>Chủ TK: <b id="qr-acc-name">...</b></div>
+            <div>Số tiền: <b id="qr-amount" style="color: var(--success);">0 đ</b></div>
+            <div style="background: rgba(245, 158, 11, 0.15); padding: 0.5rem; border-radius: 6px;">Nội dung CK: <b id="qr-memo" style="color: var(--warning); user-select: all; font-family: monospace;">...</b></div>
+          </div>
+          <button id="btn-cancel-deposit" class="btn btn-outline" style="width: 100%; margin-top: 1rem; border-color: var(--danger); color: var(--danger);">Hủy Lệnh Nạp</button>
         </div>
       </div>
     </div>
 
     <!-- Lịch sử nạp tiền -->
-    <h3 style="margin-top: 3rem; margin-bottom: 1rem;">Lịch Sử Lệnh Nạp</h3>
-    <div class="glass-panel" style="padding: 1.5rem;">
+    <h3 style="margin-bottom: 1rem; font-family: var(--font-display);">Lịch Sử Lệnh Nạp Của Bạn</h3>
+    <div class="glass-panel" style="padding: 1.5rem; border-radius: 16px;">
       <div style="overflow-x: auto;">
         <table style="width: 100%; text-align: left; border-collapse: collapse;">
           <thead>
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-              <th style="padding: 1rem;">Mã Đơn Nạp</th>
-              <th style="padding: 1rem;">Số tiền</th>
-              <th style="padding: 1rem;">Nội dung CK</th>
-              <th style="padding: 1rem;">Thời gian tạo</th>
-              <th style="padding: 1rem;">Trạng thái</th>
+            <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase;">
+              <th style="padding: 0.75rem 1rem;">Mã Đơn</th>
+              <th style="padding: 0.75rem 1rem;">Số Tiền</th>
+              <th style="padding: 0.75rem 1rem;">Nội Dung CK</th>
+              <th style="padding: 0.75rem 1rem;">Thời Gian</th>
+              <th style="padding: 0.75rem 1rem;">Trạng Thái</th>
             </tr>
           </thead>
           <tbody id="deposit-history-body">
-            <!-- Rendered via JS -->
+            <tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Đang tải dữ liệu...</td></tr>
           </tbody>
         </table>
       </div>
     </div>
-
-  </main>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/config.js"></script>

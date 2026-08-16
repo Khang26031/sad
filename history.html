@@ -6,69 +6,68 @@
   <title>Lịch Sử Mua Hàng - LEGION STORE</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/responsive.css">
-  <!-- FontAwesome for eye icon -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <div id="drawer-overlay" class="drawer-overlay"></div>
-  <div id="mobile-drawer" class="mobile-drawer glass-panel">
-    <div class="drawer-header">
-      <h2>MENU</h2>
-      <button id="drawer-close" class="btn">&times;</button>
+
+  <!-- Navbar -->
+  <div class="navbar">
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <div class="hamburger-menu" id="hamburger-btn">&#9776;</div>
+      <div class="logo" onclick="location.href='/'">LEGION STORE</div>
     </div>
-    <div class="drawer-content">
-      <a href="/" class="drawer-item">Trang Chủ</a>
-      <a href="/deposit.html" class="drawer-item">Nạp Tiền</a>
-      <a href="/history.html" class="drawer-item active">Lịch Sử Mua Hàng</a>
-      <div id="drawer-balance-wrapper" class="drawer-item d-none" style="background: rgba(255,255,255,0.05);">
-        Số dư: <span id="drawer-user-balance" style="color: var(--accent-primary); font-weight: bold;">0 đ</span>
-      </div>
-      <button id="drawer-auth-btn" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Đăng Nhập</button>
-    </div>
+    <ul class="nav-links">
+      <li><a href="/" class="nav-link " id="nav-shop-link">Cửa Hàng</a></li>
+      <li><a href="/deposit.html" class="nav-link d-none " id="nav-deposit-link">Nạp Tiền</a></li>
+      <li><a href="/history.html" class="nav-link d-none active" id="nav-history-link">Lịch Sử Mua Hàng</a></li>
+      <li id="nav-balance-wrapper" class="d-none">
+        <div id="nav-user-balance" style="font-weight: 700; color: var(--success); padding: 0.5rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">Ví: 0đ</div>
+      </li>
+      <li><a href="/login.html" class="nav-link" id="nav-auth-btn">Đăng Nhập</a></li>
+    </ul>
   </div>
 
-  <header class="header glass-panel">
-    <div class="header-container">
-      <button id="hamburger-btn" class="hamburger-btn">
-        <span></span><span></span><span></span>
-      </button>
-      <div class="logo" onclick="location.href='/'" style="cursor:pointer;">LEGION STORE</div>
-      <nav class="nav-links desktop-only">
-        <a href="/">Trang Chủ</a>
-        <a href="/deposit.html">Nạp Tiền</a>
-        <a href="/history.html" class="active">Lịch Sử Mua Hàng</a>
-      </nav>
-      <div class="user-actions desktop-only">
-        <div id="user-info" class="d-none">
-          <span class="balance-badge">Số dư: <span id="nav-user-balance">0 đ</span></span>
-        </div>
-        <button id="auth-btn" class="btn btn-outline">Đăng Nhập</button>
-      </div>
+  <!-- Navigation Drawer (Mobile) -->
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <div class="nav-drawer" id="nav-drawer">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);">
+      <div class="logo">LEGION STORE</div>
+      <button id="drawer-close-btn" style="background: none; border: none; color: var(--text-secondary); font-size: 1.75rem; cursor: pointer; line-height: 1;">&times;</button>
     </div>
-  </header>
+    <ul style="list-style: none; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+      <li><a href="/" class="drawer-link " id="drawer-shop-link">Cửa Hàng</a></li>
+      <li><a href="/deposit.html" class="drawer-link d-none " id="drawer-deposit-link">Nạp Tiền</a></li>
+      <li><a href="/history.html" class="drawer-link d-none active" id="drawer-history-link">Lịch Sử Mua Hàng</a></li>
+      <li id="drawer-balance-wrapper" class="d-none" style="padding: 0.75rem 1rem;">
+        <div id="drawer-user-balance" style="font-weight: 700; color: var(--success); padding: 0.5rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px; text-align: center;">Ví: 0đ</div>
+      </li>
+      <li><a href="/login.html" class="drawer-link" id="drawer-auth-btn" style="background: var(--accent-primary); color: #fff; text-align: center; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">Đăng Nhập</a></li>
+    </ul>
+  </div>
 
-  <main style="max-width: 1000px; margin: 6rem auto 2rem auto; padding: 0 1rem;">
-    <h2 style="margin-bottom: 2rem; color: var(--accent-primary);">Lịch Sử Mua Hàng</h2>
+
+  <div class="container" style="max-width: 1000px; margin: 2rem auto; padding: 0 1rem;">
+    <h2 style="margin-bottom: 2rem; color: var(--accent-primary); font-family: var(--font-display);">Lịch Sử Mua Hàng</h2>
     
     <!-- Loader -->
     <div id="history-loader" style="text-align: center; padding: 3rem;">
-      <div class="spinner"></div>
-      <p style="margin-top: 1rem; color: var(--text-secondary);">Đang tải dữ liệu...</p>
+      <div class="loading-spinner"></div>
+      <p style="margin-top: 1rem; color: var(--text-secondary);">Đang tải lịch sử mua hàng...</p>
     </div>
 
     <!-- History Content -->
     <div id="history-content" class="d-none">
-      <div class="glass-panel" style="padding: 1.5rem;">
+      <div class="glass-panel" style="padding: 1.5rem; border-radius: 16px;">
         <div style="overflow-x: auto;">
           <table style="width: 100%; text-align: left; border-collapse: collapse;">
             <thead>
-              <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                <th style="padding: 1rem;">Mã ĐH</th>
-                <th style="padding: 1rem;">Sản phẩm</th>
-                <th style="padding: 1rem;">Ngày mua</th>
-                <th style="padding: 1rem;">Số tiền</th>
-                <th style="padding: 1rem;">Trạng thái</th>
-                <th style="padding: 1rem; text-align: center;">Tài khoản / Key</th>
+              <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase;">
+                <th style="padding: 0.75rem 1rem;">Mã ĐH</th>
+                <th style="padding: 0.75rem 1rem;">Sản Phẩm</th>
+                <th style="padding: 0.75rem 1rem;">Ngày Mua</th>
+                <th style="padding: 0.75rem 1rem;">Số Tiền</th>
+                <th style="padding: 0.75rem 1rem;">Trạng Thái</th>
+                <th style="padding: 0.75rem 1rem; text-align: center;">Tài Khoản / Key</th>
               </tr>
             </thead>
             <tbody id="history-table-body">
@@ -78,18 +77,22 @@
         </div>
       </div>
     </div>
-  </main>
+  </div>
 
   <!-- Key Modal -->
   <div id="key-modal" class="modal-overlay">
-    <div class="modal glass-panel">
-      <button class="modal-close" id="key-modal-close">&times;</button>
-      <h3 style="margin-bottom: 1rem; color: var(--accent-primary);">Chi tiết Tài khoản / Key</h3>
-      <p style="margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-secondary);">Mã ĐH: <span id="modal-key-id"></span></p>
-      <div style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px; font-family: monospace; word-break: break-all; margin-bottom: 1rem;" id="modal-key-content">
-        <!-- Key content here -->
+    <div class="glass-panel modal-container" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 style="color: var(--accent-primary);">Chi Tiết Tài Khoản / Key</h3>
+        <button class="modal-close" id="key-modal-close">&times;</button>
       </div>
-      <button class="btn btn-outline" style="width: 100%;" onclick="copyKeyContent()">Sao chép</button>
+      <div class="modal-body" style="padding-top: 1rem;">
+        <p style="margin-bottom: 0.75rem; font-size: 0.9rem; color: var(--text-secondary);">Mã Đơn Hàng: <b id="modal-key-id" style="color: #fff; font-family: monospace;"></b></p>
+        <div style="background: rgba(0,0,0,0.6); border: 1px solid var(--border-color); padding: 1.25rem; border-radius: 10px; font-family: monospace; word-break: break-all; margin-bottom: 1.25rem; font-size: 1.05rem; color: var(--success); line-height: 1.6;" id="modal-key-content">
+          <!-- Key content -->
+        </div>
+        <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="copyKeyContent()">Sao Chép Nội Dung</button>
+      </div>
     </div>
   </div>
 

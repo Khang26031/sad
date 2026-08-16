@@ -17,13 +17,13 @@
       <div class="logo" onclick="location.href='/'">LEGION STORE</div>
     </div>
     <ul class="nav-links">
-      <li><a href="/" class="nav-link" id="nav-shop-link">Cửa Hàng</a></li>
-      <li><a href="/#deposit" class="nav-link" id="nav-deposit-link">Nạp Tiền</a></li>
-      <li><a href="/#purchase-history" class="nav-link" id="nav-history-link">Lịch Sử Mua Hàng</a></li>
+      <li><a href="/" class="nav-link " id="nav-shop-link">Cửa Hàng</a></li>
+      <li><a href="/deposit.html" class="nav-link d-none " id="nav-deposit-link">Nạp Tiền</a></li>
+      <li><a href="/history.html" class="nav-link d-none " id="nav-history-link">Lịch Sử Mua Hàng</a></li>
       <li id="nav-balance-wrapper" class="d-none">
         <div id="nav-user-balance" style="font-weight: 700; color: var(--success); padding: 0.5rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">Ví: 0đ</div>
       </li>
-      <li><a href="/login" class="nav-link" id="nav-auth-btn">Đăng Nhập</a></li>
+      <li><a href="/login.html" class="nav-link" id="nav-auth-btn">Đăng Nhập</a></li>
     </ul>
   </div>
 
@@ -35,39 +35,50 @@
       <button id="drawer-close-btn" style="background: none; border: none; color: var(--text-secondary); font-size: 1.75rem; cursor: pointer; line-height: 1;">&times;</button>
     </div>
     <ul style="list-style: none; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
-      <li><a href="/" class="drawer-link active" id="drawer-shop-link">Cửa Hàng</a></li>
-      <li><a href="#deposit" class="drawer-link" id="drawer-deposit-link">Nạp Tiền</a></li>
-      <li><a href="#purchase-history" class="drawer-link" id="drawer-history-link">Lịch Sử Mua Hàng</a></li>
+      <li><a href="/" class="drawer-link " id="drawer-shop-link">Cửa Hàng</a></li>
+      <li><a href="/deposit.html" class="drawer-link d-none " id="drawer-deposit-link">Nạp Tiền</a></li>
+      <li><a href="/history.html" class="drawer-link d-none " id="drawer-history-link">Lịch Sử Mua Hàng</a></li>
       <li id="drawer-balance-wrapper" class="d-none" style="padding: 0.75rem 1rem;">
         <div id="drawer-user-balance" style="font-weight: 700; color: var(--success); padding: 0.5rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px; text-align: center;">Ví: 0đ</div>
       </li>
-      <li><a href="/login" class="drawer-link" id="drawer-auth-btn" style="background: var(--accent-primary); color: #fff; text-align: center; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">Đăng Nhập</a></li>
+      <li><a href="/login.html" class="drawer-link" id="drawer-auth-btn" style="background: var(--accent-primary); color: #fff; text-align: center; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">Đăng Nhập</a></li>
     </ul>
   </div>
 
-  <div class="container">
-    <div id="product-detail-loader" class="loading-spinner" style="margin: 6rem auto;"></div>
-    
-    <!-- Product Detail Layout -->
-    <div class="product-detail-container d-none" id="product-detail-box">
-      <div>
-        <img src="" id="prod-img" class="detail-img" alt="Sản phẩm">
+
+  <div class="container" style="margin-top: 2rem;">
+    <div id="product-detail-loader" style="text-align: center; padding: 4rem;">
+      <div class="loading-spinner"></div>
+      <p style="margin-top: 1rem; color: var(--text-secondary);">Đang tải thông tin sản phẩm...</p>
+    </div>
+
+    <div id="product-detail-box" class="product-detail-container d-none">
+      <div class="detail-left">
+        <img id="prod-img" src="" alt="Product Image" class="detail-img">
       </div>
-      <div class="detail-info">
-        <div class="detail-cat" id="prod-cat">DANH MỤC</div>
-        <h1 class="detail-title" id="prod-title">Tên sản phẩm</h1>
-        <div class="stock-badge" id="prod-stock" style="align-self: flex-start; margin-bottom: 1.5rem;">Kho: Còn lại 0</div>
-        <div class="detail-price" id="prod-price">0 VNĐ</div>
-        <div class="detail-desc" id="prod-desc">Mô tả chi tiết sản phẩm.</div>
+
+      <div class="detail-right glass-panel" style="padding: 2rem; border-radius: 20px;">
+        <div id="prod-cat" style="font-size: 0.85rem; text-transform: uppercase; color: var(--accent-primary); font-weight: 700; margin-bottom: 0.5rem;">Danh mục</div>
+        <h1 id="prod-title" style="font-family: var(--font-display); font-size: 2rem; margin-bottom: 1rem;">Tên Sản Phẩm</h1>
         
-        <button id="btn-buy-now" class="btn btn-primary" style="justify-content: center; padding: 1rem; font-size: 1.1rem; width: 100%; border-radius: 12px;">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+          <span id="prod-price" style="font-size: 1.75rem; font-weight: 800; color: var(--accent-secondary);">0 đ</span>
+          <span id="prod-stock" class="stock-badge">Kho: Đang tải...</span>
+        </div>
+
+        <div style="margin-bottom: 2rem;">
+          <h4 style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.95rem;">Mô Tả Sản Phẩm:</h4>
+          <p id="prod-desc" style="color: var(--text-secondary); line-height: 1.6; white-space: pre-line;"></p>
+        </div>
+
+        <button id="btn-buy-now" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 700; border-radius: 12px; justify-content: center;">
           Mua Ngay
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Purchase Modal (Same as index.html for checkout consistency) -->
+  <!-- Purchase Modal -->
   <div class="modal-overlay" id="purchase-modal">
     <div class="glass-panel modal-container">
       <div class="modal-header">
@@ -76,25 +87,22 @@
       </div>
       
       <div class="modal-body">
-        <!-- Form Fields and Balance Payment -->
         <div id="modal-checkout-stage">
-          <div id="product-custom-fields-container">
-            <!-- Dynamic fields populated by JS -->
-          </div>
+          <div id="product-custom-fields-container"></div>
           
-          <div class="payment-details mt-4">
-            <div class="payment-row">
-              <span class="payment-label">Giá bán sản phẩm:</span>
-              <span class="payment-val" id="checkout-product-price" style="color: var(--accent-secondary); font-size: 1.1rem;">0đ</span>
+          <div class="payment-details mt-4" style="margin-top: 1.5rem; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 10px;">
+            <div class="payment-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span class="payment-label">Giá thanh toán:</span>
+              <span class="payment-val" id="checkout-product-price" style="color: var(--accent-secondary); font-weight: 700; font-size: 1.1rem;">0đ</span>
             </div>
-            <div class="payment-row">
-              <span class="payment-label">Số dư hiện tại của bạn:</span>
-              <span class="payment-val" id="checkout-user-balance">0đ</span>
+            <div class="payment-row" style="display: flex; justify-content: space-between;">
+              <span class="payment-label">Số dư hiện tại:</span>
+              <span class="payment-val" id="checkout-user-balance" style="font-weight: 700;">0đ</span>
             </div>
           </div>
 
-          <div id="checkout-balance-warning" class="d-none" style="color: var(--danger); font-size: 0.85rem; font-weight: 600; margin: 1rem 0; padding: 0.5rem; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 6px; background: rgba(239, 68, 68, 0.05); text-align: center;">
-            Số dư của bạn không đủ! Vui lòng nạp thêm tiền.
+          <div id="checkout-balance-warning" class="d-none" style="color: var(--danger); font-size: 0.85rem; font-weight: 600; margin: 1rem 0; padding: 0.75rem; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; background: rgba(239, 68, 68, 0.05); text-align: center;">
+            Số dư ví không đủ! Vui lòng nạp thêm tiền.
           </div>
 
           <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem; width: 100%;">
@@ -107,12 +115,11 @@
           </div>
         </div>
 
-        <!-- Success Screen -->
         <div id="modal-success-stage" class="d-none">
           <div style="text-align: center; padding: 1.5rem 0;">
             <div style="color: var(--success); font-size: 3.5rem; margin-bottom: 0.5rem;">✔</div>
-            <h4 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">MUA HÀNG THÀNH CÔNG!</h4>
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">Đơn hàng của bạn đã được ghi nhận. Vui lòng bấm vào nút dưới để xem key hoặc theo dõi tiến trình.</p>
+            <h4 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;" id="checkout-success-title">MUA HÀNG THÀNH CÔNG!</h4>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;" id="checkout-success-msg">Đơn hàng của bạn đã được ghi nhận thành công.</p>
             <button id="btn-go-to-history" class="btn btn-success" style="width: 100%; justify-content: center; padding: 0.75rem;">
               Xem Lịch Sử Mua Hàng
             </button>
@@ -122,333 +129,9 @@
     </div>
   </div>
 
-  <!-- Floating Zalo Contact Button -->
-  <a href="https://zalo.me/0349255864" target="_blank" class="zalo-float-btn" title="Hỗ trợ Zalo: 0349255864">
-    <svg class="zalo-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12.002 2C6.48 2 2 5.926 2 10.774c0 2.5 1.205 4.747 3.127 6.275l-.892 3.267a.75.75 0 0 0 1.077.838l3.968-2.18c.866.242 1.776.374 2.722.374 5.522 0 10.002-3.926 10.002-8.774C22.004 5.926 17.524 2 12.002 2zm3.328 12.44h-5.06l5.06-5.83v-.86H9.722v1.25h4.634l-5.06 5.83v.86h6.034v-1.25z"/>
-    </svg>
-  </a>
-
-  <!-- Supabase Script -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/config.js"></script>
-  <script>
-    
-window.showToast = function(message, type = 'info') {
-  let container = document.getElementById('toast-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toast-container';
-    container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; max-width: 350px; width: calc(100% - 40px);';
-    document.body.appendChild(container);
-  }
-
-  const card = document.createElement('div');
-  card.className = `toast-card toast-${type}`;
-  card.innerHTML = `
-    <span>${message}</span>
-    <button class="toast-close">&times;</button>
-  `;
-
-  const closeBtn = card.querySelector('.toast-close');
-  const closeToast = () => {
-    card.style.animation = 'toastSlideOut 0.3s ease forwards';
-    setTimeout(() => { card.remove(); }, 300);
-  };
-  closeBtn.onclick = closeToast;
-
-  setTimeout(closeToast, 4000);
-  container.appendChild(card);
-};
-
-const { createClient } = supabase;
-    const supabaseClient = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
-
-    let currentProduct = null;
-    let userProfile = null;
-    let authSession = null;
-
-    async function initProductPage() {
-      await checkAuthSession();
-      await loadProductDetails();
-    }
-
-    
-    // Hamburger Drawer logic
-    const hamburgerBtn = document.getElementById('hamburger-btn');
-    const navDrawer = document.getElementById('nav-drawer');
-    const drawerOverlay = document.getElementById('drawer-overlay');
-    const drawerCloseBtn = document.getElementById('drawer-close-btn');
-    const drawerAuthBtn = document.getElementById('drawer-auth-btn');
-    const drawerUserBalance = document.getElementById('drawer-user-balance');
-    const drawerBalanceWrapper = document.getElementById('drawer-balance-wrapper');
-
-    function toggleDrawer(open) {
-      if (open) {
-        navDrawer.classList.add('open');
-        drawerOverlay.classList.add('open');
-      } else {
-        navDrawer.classList.remove('open');
-        drawerOverlay.classList.remove('open');
-      }
-    }
-
-    if (hamburgerBtn) hamburgerBtn.onclick = () => toggleDrawer(true);
-    if (drawerCloseBtn) drawerCloseBtn.onclick = () => toggleDrawer(false);
-    if (drawerOverlay) drawerOverlay.onclick = () => toggleDrawer(false);
-
-    // Sync Drawer in checkAuthSession
-    
-    async function checkAuthSession() {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      authSession = session;
-      const authBtn = document.getElementById('nav-auth-btn');
-      const balanceWrapper = document.getElementById('nav-balance-wrapper');
-      
-      if (session) {
-        authBtn.innerText = 'Đăng Xuất';
-        authBtn.onclick = async (e) => {
-          e.preventDefault();
-          await supabaseClient.auth.signOut();
-          location.href = '/';
-        };
-        
-        // Sync Drawer
-        if (drawerAuthBtn) {
-          drawerAuthBtn.innerText = 'Đăng Xuất';
-          drawerAuthBtn.onclick = async (e) => {
-            e.preventDefault();
-            await supabaseClient.auth.signOut();
-            location.href = '/';
-          };
-        }
-
-        // Fetch User balance
-        const { data: profile } = await supabaseClient
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profile) {
-          userProfile = profile;
-          document.getElementById('nav-user-balance').innerText = `Ví: ${formatVND(profile.balance)}`;
-          balanceWrapper.classList.remove('d-none');
-          
-          // Sync Drawer
-          if (drawerUserBalance) drawerUserBalance.innerText = `Ví: ${formatVND(profile.balance)}`;
-          if (drawerBalanceWrapper) drawerBalanceWrapper.classList.remove('d-none');
-        }
-      } else {
-        authBtn.innerText = 'Đăng Nhập';
-        authBtn.onclick = () => location.href = '/login';
-        balanceWrapper.classList.add('d-none');
-        
-        // Sync Drawer
-        if (drawerAuthBtn) {
-          drawerAuthBtn.innerText = 'Đăng Nhập';
-          drawerAuthBtn.onclick = () => location.href = '/login';
-        }
-        if (drawerBalanceWrapper) drawerBalanceWrapper.classList.add('d-none');
-      }
-    }
-
-    async function loadProductDetails() {
-      const loader = document.getElementById('product-detail-loader');
-      const detailBox = document.getElementById('product-detail-box');
-      
-      // Parse slug from URL: /san-pham/netflix-premium -> netflix-premium
-      const pathParts = window.location.pathname.split('/');
-      const slug = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
-
-      if (!slug) {
-        loader.innerHTML = '<p style="color: var(--danger);">Đường dẫn không hợp lệ.</p>';
-        return;
-      }
-
-      try {
-        const { data: product, error } = await supabaseClient
-          .from('products')
-          .select('*, categories(name)')
-          .eq('slug', slug)
-          .single();
-
-        if (error || !product) throw error || new Error('Product not found');
-        currentProduct = product;
-
-        // Fetch stock count
-        let stock = 0;
-        if (product.product_type === 'auto') {
-          const { count } = await supabaseClient
-            .from('items')
-            .select('*', { count: 'exact', head: true })
-            .eq('product_id', product.id)
-            .eq('is_sold', false);
-          stock = count || 0;
-        } else {
-          stock = product.manual_stock || 0;
-        }
-        currentProduct.stock = stock;
-
-        // Set Details UI
-        document.getElementById('prod-img').src = product.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60';
-        document.getElementById('prod-title').innerText = product.name;
-        document.getElementById('prod-cat').innerText = product.categories?.name || 'Sản phẩm';
-        document.getElementById('prod-price').innerText = formatVND(product.price);
-        document.getElementById('prod-desc').innerText = product.description || 'Sản phẩm giao key tự động uy tín, chất lượng.';
-
-        const stockBadge = document.getElementById('prod-stock');
-        if (stock === 0) {
-          stockBadge.innerText = 'Hết hàng';
-          stockBadge.className = 'stock-badge empty';
-          document.getElementById('btn-buy-now').disabled = true;
-          document.getElementById('btn-buy-now').style.opacity = '0.5';
-          document.getElementById('btn-buy-now').innerText = 'Hết Hàng';
-        } else {
-          stockBadge.innerText = `Kho: Còn lại ${stock}`;
-          stockBadge.className = 'stock-badge';
-        }
-
-        // Title update for SEO
-        document.title = `${product.name} - LEGION STORE`;
-
-        loader.classList.add('d-none');
-        detailBox.classList.remove('d-none');
-
-        // Buy button event
-        document.getElementById('btn-buy-now').onclick = openPurchaseModal;
-
-      } catch (err) {
-        loader.innerHTML = `<p style="color: var(--danger); text-align: center;">Không tìm thấy sản phẩm hoặc có lỗi xảy ra: ${err.message}</p>`;
-      }
-    }
-
-    // Purchase Modal Flow
-    const purchaseModal = document.getElementById('purchase-modal');
-    const modalCloseBtn = document.getElementById('modal-close-btn');
-    const checkoutStage = document.getElementById('modal-checkout-stage');
-    const successStage = document.getElementById('modal-success-stage');
-    const fieldsContainer = document.getElementById('product-custom-fields-container');
-    const payBalanceBtn = document.getElementById('btn-pay-balance');
-    const redirectDepBtn = document.getElementById('btn-redirect-deposit');
-    const balanceWarning = document.getElementById('checkout-balance-warning');
-
-    function openPurchaseModal() {
-      if (!authSession) {
-        // Enforce login
-        showToast('Bạn cần đăng nhập tài khoản để thực hiện mua hàng bằng số dư.', 'warning');
-        location.href = '/login';
-        return;
-      }
-
-      document.getElementById('modal-product-title').innerText = `Mua: ${currentProduct.name}`;
-      document.getElementById('checkout-product-price').innerText = formatVND(currentProduct.price);
-      document.getElementById('checkout-user-balance').innerText = formatVND(userProfile.balance);
-
-      // Render custom form fields
-      fieldsContainer.innerHTML = '';
-      const fields = currentProduct.form_fields || [];
-      if (fields.length > 0) {
-        fields.forEach(fieldName => {
-          fieldsContainer.innerHTML += `
-            <div class="form-group">
-              <label class="form-label">${fieldName} <span style="color: var(--danger);">*</span></label>
-              <input type="text" class="form-control custom-input-field" data-field-name="${fieldName}" placeholder="Nhập ${fieldName} của bạn" required>
-            </div>
-          `;
-        });
-      }
-
-      // Check balance
-      if (userProfile.balance < currentProduct.price) {
-        balanceWarning.classList.remove('d-none');
-        redirectDepBtn.classList.remove('d-none');
-        payBalanceBtn.classList.add('d-none');
-      } else {
-        balanceWarning.classList.add('d-none');
-        redirectDepBtn.classList.add('d-none');
-        payBalanceBtn.classList.remove('d-none');
-      }
-
-      checkoutStage.classList.remove('d-none');
-      successStage.classList.add('d-none');
-      purchaseModal.classList.add('open');
-    }
-
-    modalCloseBtn.onclick = () => {
-      purchaseModal.classList.remove('open');
-    };
-
-    redirectDepBtn.onclick = () => {
-      location.href = '/#deposit';
-    };
-
-    payBalanceBtn.onclick = async () => {
-      // Collect custom inputs
-      const inputs = [];
-      const inputFields = document.querySelectorAll('.custom-input-field');
-      let isValid = true;
-
-      inputFields.forEach(el => {
-        const val = el.value.trim();
-        if (!val) {
-          isValid = false;
-          el.style.borderColor = 'var(--danger)';
-        } else {
-          el.style.borderColor = 'var(--border-color)';
-          inputs.push({
-            name: el.getAttribute('data-field-name'),
-            value: val
-          });
-        }
-      });
-
-      if (!isValid) {
-        showToast('Vui lòng điền đầy đủ thông tin biểu mẫu yêu cầu.', 'warning');
-        return;
-      }
-
-      payBalanceBtn.disabled = true;
-      payBalanceBtn.innerText = 'Đang thanh toán...';
-
-      try {
-        // Call RPC purchase_product
-        const { data: resultKey, error } = await supabaseClient.rpc('purchase_product', {
-          p_product_id: currentProduct.id,
-          p_customer_inputs: inputs
-        });
-
-        if (error) throw error;
-
-        // Success transition
-        checkoutStage.classList.add('d-none');
-        successStage.classList.remove('d-none');
-
-        // Check if manual or auto
-        if (currentProduct.product_type === 'manual') {
-          document.getElementById('checkout-success-msg').innerText = 'Yêu cầu của bạn đã được gửi tới Admin. Vui lòng theo dõi trạng thái xử lý cày thuê trong Lịch sử mua hàng.';
-        } else {
-          document.getElementById('checkout-success-msg').innerText = 'Thanh toán thành công! Key tài khoản đã được giao. Vui lòng bấm vào nút dưới để nhận key của bạn.';
-        }
-
-      } catch (err) {
-        showToast('Giao dịch thất bại: ' + err.message, 'error');
-      } finally {
-        payBalanceBtn.disabled = false;
-        payBalanceBtn.innerText = 'Thanh Toán Bằng Số Dư';
-      }
-    };
-
-    document.getElementById('btn-go-to-history').onclick = () => {
-      location.href = '/#purchase-history';
-    };
-
-    // Utilities
-    function formatVND(amount) {
-      return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-    }
-
-    initProductPage();
-  </script>
+  <script src="/app.js"></script>
+  <script src="/product.js"></script>
 </body>
 </html>
