@@ -11,7 +11,7 @@
     },
     {
       "source": "/san-pham/:slug",
-      "destination": "/product.html"
+      "destination": "/product"
     }
   ]
 }

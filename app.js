@@ -233,18 +233,25 @@ function renderProducts(products) {
 
   products.forEach(p => {
     const isOutOfStock = p.stock === 0;
+    
     const card = document.createElement('div');
     card.className = 'glass-panel product-card';
+    card.style.cursor = 'pointer';
+    card.onclick = (e) => {
+        if(e.target.tagName !== 'BUTTON') {
+            location.href = '/san-pham/' + p.slug;
+        }
+    };
     card.innerHTML = `
-      <img src="${p.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60'}" class="product-img" alt="${p.name}" onclick="location.href='/san-pham/${p.slug}'" style="cursor: pointer;">
+      <img src="${p.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60'}" class="product-img" alt="${p.name}">
       <div class="product-content">
         <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--accent-primary); font-weight: 700; margin-bottom: 0.25rem;">${p.categories?.name || 'Sản phẩm'}</div>
-        <h4 class="product-title" onclick="location.href='/san-pham/${p.slug}'" style="cursor: pointer;">${p.name}</h4>
+        <h4 class="product-title">${p.name}</h4>
         <p class="product-desc">${p.description || 'Sản phẩm giao key tự động hoặc cày thuê uy tín.'}</p>
         <div class="product-footer">
           <div>
             <div class="product-price">${formatVND(p.price)}</div>
-            <div class="stock-badge ${isOutOfStock ? 'empty' : ''}">${isOutOfStock ? 'Hết hàng' : `Kho: Còn lại ${p.stock}`}</div>
+            <div class="stock-badge ${isOutOfStock ? 'empty' : ''}">${isOutOfStock ? 'Hết hàng' : \`Kho: Còn lại ${p.stock}\`}</div>
           </div>
           <button class="btn btn-primary" ${isOutOfStock ? 'disabled style="opacity: 0.5; pointer-events: none;"' : ''} onclick="openPurchaseModal('${p.id}')">
             ${isOutOfStock ? 'Hết hàng' : 'Mua Ngay'}
@@ -252,6 +259,7 @@ function renderProducts(products) {
         </div>
       </div>
     `;
+
     productsContainer.appendChild(card);
   });
 }
@@ -700,3 +708,17 @@ if (drawerHistoryLink) {
     navHistoryLink.click();
   };
 }
+
+
+// Inject Zalo Contact Button
+document.addEventListener('DOMContentLoaded', () => {
+    const zaloBtn = document.createElement('a');
+    zaloBtn.href = 'https://zalo.me/0349255864';
+    zaloBtn.target = '_blank';
+    zaloBtn.id = 'zalo-contact-btn';
+    zaloBtn.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Logo_Zalo.svg/512px-Logo_Zalo.svg.png" alt="Zalo" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">';
+    zaloBtn.style.cssText = 'position:fixed;bottom:20px;right:20px;width:60px;height:60px;border-radius:50%;box-shadow:0 4px 15px rgba(0,0,0,0.3);z-index:9999;cursor:pointer;transition:transform 0.3s ease;display:flex;align-items:center;justify-content:center;background:#fff;';
+    zaloBtn.onmouseover = () => { zaloBtn.style.transform = 'scale(1.1)'; };
+    zaloBtn.onmouseout = () => { zaloBtn.style.transform = 'scale(1)'; };
+    document.body.appendChild(zaloBtn);
+});

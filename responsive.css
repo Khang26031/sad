@@ -1,0 +1,47 @@
+
+/* responsive.css - Thiết kế chuẩn mọi thiết bị */
+
+@media (max-width: 992px) {
+    .product-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 15px;
+    }
+    .product-detail-container {
+        grid-template-columns: 1fr; /* Stack on smaller screens */
+    }
+}
+
+@media (max-width: 768px) {
+    .product-grid {
+        grid-template-columns: repeat(2, 1fr) !important; /* 1 hàng 2 mục */
+        gap: 10px;
+    }
+    .hero-title {
+        font-size: 2rem;
+    }
+    .hero-subtitle {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .product-grid {
+        grid-template-columns: repeat(2, 1fr) !important; /* Giữ 2 mục trên điện thoại */
+        gap: 10px;
+    }
+    .product-card .card-content {
+        padding: 10px;
+    }
+    .product-card h3 {
+        font-size: 1rem;
+    }
+    .product-card .price {
+        font-size: 1.1rem;
+    }
+    #zalo-contact-btn {
+        width: 50px !important;
+        height: 50px !important;
+        bottom: 15px !important;
+        right: 15px !important;
+    }
+}
