@@ -1,11 +1,13 @@
 
-/* responsive.css - Thiết kế chuẩn mọi thiết bị */
+/* responsive.css - Thiết kế 2 mục trên mọi thiết bị */
+
+.product-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 15px;
+}
 
 @media (max-width: 992px) {
-    .product-grid {
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 15px;
-    }
     .product-detail-container {
         grid-template-columns: 1fr; /* Stack on smaller screens */
     }
@@ -13,7 +15,6 @@
 
 @media (max-width: 768px) {
     .product-grid {
-        grid-template-columns: repeat(2, 1fr) !important; /* 1 hàng 2 mục */
         gap: 10px;
     }
     .hero-title {
@@ -25,10 +26,6 @@
 }
 
 @media (max-width: 480px) {
-    .product-grid {
-        grid-template-columns: repeat(2, 1fr) !important; /* Giữ 2 mục trên điện thoại */
-        gap: 10px;
-    }
     .product-card .card-content {
         padding: 10px;
     }

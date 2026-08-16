@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lịch Sử Mua Hàng - LEGION STORE</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/responsive.css">
+  <!-- FontAwesome for eye icon -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div id="drawer-overlay" class="drawer-overlay"></div>
+  <div id="mobile-drawer" class="mobile-drawer glass-panel">
+    <div class="drawer-header">
+      <h2>MENU</h2>
+      <button id="drawer-close" class="btn">&times;</button>
+    </div>
+    <div class="drawer-content">
+      <a href="/" class="drawer-item">Trang Chủ</a>
+      <a href="/deposit.html" class="drawer-item">Nạp Tiền</a>
+      <a href="/history.html" class="drawer-item active">Lịch Sử Mua Hàng</a>
+      <div id="drawer-balance-wrapper" class="drawer-item d-none" style="background: rgba(255,255,255,0.05);">
+        Số dư: <span id="drawer-user-balance" style="color: var(--accent-primary); font-weight: bold;">0 đ</span>
+      </div>
+      <button id="drawer-auth-btn" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Đăng Nhập</button>
+    </div>
+  </div>
+
+  <header class="header glass-panel">
+    <div class="header-container">
+      <button id="hamburger-btn" class="hamburger-btn">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="logo" onclick="location.href='/'" style="cursor:pointer;">LEGION STORE</div>
+      <nav class="nav-links desktop-only">
+        <a href="/">Trang Chủ</a>
+        <a href="/deposit.html">Nạp Tiền</a>
+        <a href="/history.html" class="active">Lịch Sử Mua Hàng</a>
+      </nav>
+      <div class="user-actions desktop-only">
+        <div id="user-info" class="d-none">
+          <span class="balance-badge">Số dư: <span id="nav-user-balance">0 đ</span></span>
+        </div>
+        <button id="auth-btn" class="btn btn-outline">Đăng Nhập</button>
+      </div>
+    </div>
+  </header>
+
+  <main style="max-width: 1000px; margin: 6rem auto 2rem auto; padding: 0 1rem;">
+    <h2 style="margin-bottom: 2rem; color: var(--accent-primary);">Lịch Sử Mua Hàng</h2>
+    
+    <!-- Loader -->
+    <div id="history-loader" style="text-align: center; padding: 3rem;">
+      <div class="spinner"></div>
+      <p style="margin-top: 1rem; color: var(--text-secondary);">Đang tải dữ liệu...</p>
+    </div>
+
+    <!-- History Content -->
+    <div id="history-content" class="d-none">
+      <div class="glass-panel" style="padding: 1.5rem;">
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; text-align: left; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <th style="padding: 1rem;">Mã ĐH</th>
+                <th style="padding: 1rem;">Sản phẩm</th>
+                <th style="padding: 1rem;">Ngày mua</th>
+                <th style="padding: 1rem;">Số tiền</th>
+                <th style="padding: 1rem;">Trạng thái</th>
+                <th style="padding: 1rem; text-align: center;">Tài khoản / Key</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Key Modal -->
+  <div id="key-modal" class="modal-overlay">
+    <div class="modal glass-panel">
+      <button class="modal-close" id="key-modal-close">&times;</button>
+      <h3 style="margin-bottom: 1rem; color: var(--accent-primary);">Chi tiết Tài khoản / Key</h3>
+      <p style="margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-secondary);">Mã ĐH: <span id="modal-key-id"></span></p>
+      <div style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px; font-family: monospace; word-break: break-all; margin-bottom: 1rem;" id="modal-key-content">
+        <!-- Key content here -->
+      </div>
+      <button class="btn btn-outline" style="width: 100%;" onclick="copyKeyContent()">Sao chép</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/config.js"></script>
+  <script src="/app.js"></script>
+  <script src="/history.js"></script>
+</body>
+</html>

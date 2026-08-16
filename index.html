@@ -17,8 +17,8 @@
     </div>
     <ul class="nav-links">
       <li><a href="/" class="nav-link active" id="nav-shop-link">Cửa Hàng</a></li>
-      <li><a href="#deposit" class="nav-link d-none" id="nav-deposit-link">Nạp Tiền</a></li>
-      <li><a href="#purchase-history" class="nav-link d-none" id="nav-history-link">Lịch Sử Mua Hàng</a></li>
+      <li><a href="/deposit.html" class="nav-link d-none" id="nav-deposit-link">Nạp Tiền</a></li>
+      <li><a href="/history.html" class="nav-link d-none" id="nav-history-link">Lịch Sử Mua Hàng</a></li>
       <li id="nav-balance-wrapper" class="d-none">
         <div id="nav-user-balance" style="font-weight: 700; color: var(--success); padding: 0.5rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">Ví: 0đ</div>
       </li>
@@ -35,8 +35,8 @@
     </div>
     <ul style="list-style: none; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
       <li><a href="/" class="drawer-link active" id="drawer-shop-link">Cửa Hàng</a></li>
-      <li><a href="#deposit" class="drawer-link" id="drawer-deposit-link">Nạp Tiền</a></li>
-      <li><a href="#purchase-history" class="drawer-link" id="drawer-history-link">Lịch Sử Mua Hàng</a></li>
+      <li><a href="/deposit.html" class="drawer-link" id="drawer-deposit-link">Nạp Tiền</a></li>
+      <li><a href="/history.html" class="drawer-link" id="drawer-history-link">Lịch Sử Mua Hàng</a></li>
       <li id="drawer-balance-wrapper" class="d-none" style="padding: 0.75rem 1rem;">
         <div id="drawer-user-balance" style="font-weight: 700; color: var(--success); padding: 0.5rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px; text-align: center;">Ví: 0đ</div>
       </li>
@@ -66,90 +66,8 @@
     </div>
 
     <!-- Deposit Section (Only for Logged-in Users) -->
-    <div id="deposit-section" class="d-none" style="max-width: 600px; margin: 3rem auto;">
-      <h2 style="font-family: var(--font-display); font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; text-align: center;">Nạp Tiền Vào Tài Khoản</h2>
-      <p style="color: var(--text-secondary); text-align: center; font-size: 0.95rem; margin-bottom: 2rem;">Hệ thống quét MBBank cộng số dư tự động trong 1-2 phút.</p>
-      
-      <div class="glass-panel" style="padding: 2rem; border-radius: 20px;">
-        
-        <!-- Step 1: Input Amount -->
-        <div id="dep-step-input">
-          <div class="form-group">
-            <label class="form-label">Chọn số tiền nạp nhanh</label>
-            <div class="quick-deposit-grid">
-              <button class="quick-amt-btn" onclick="setDepositAmount(50000)">50k</button>
-              <button class="quick-amt-btn" onclick="setDepositAmount(100000)">100k</button>
-              <button class="quick-amt-btn" onclick="setDepositAmount(200000)">200k</button>
-              <button class="quick-amt-btn" onclick="setDepositAmount(500000)">500k</button>
-              <button class="quick-amt-btn" onclick="setDepositAmount(1000000)">1M</button>
-              <button class="quick-amt-btn active" onclick="setDepositAmount(10000)">Khác (Min 10k)</button>
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">Số tiền muốn nạp (đơn vị: VNĐ)</label>
-            <input type="number" id="deposit-amount-input" class="form-control" placeholder="10000" min="10000" value="10000">
-          </div>
-
-          <button id="btn-confirm-deposit-init" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.75rem;">
-            Xác Nhận Nạp Tiền
-          </button>
-        </div>
-
-        <!-- Step 2: Show QR & Payment Instructions -->
-        <div id="dep-step-pay" class="d-none payment-flow">
-          <p style="color: var(--warning); font-size: 0.9rem; font-weight: 500;">Vui lòng chuyển khoản đúng số tiền và nội dung bên dưới để được cộng tiền tự động.</p>
-          
-          <img src="" id="deposit-qr-img" class="qr-code-img" alt="Mã QR Nạp Tiền">
-
-          <div class="payment-details">
-            <div class="payment-row">
-              <span class="payment-label">Ngân Hàng:</span>
-              <span class="payment-val" id="dep-bank-name">MBBank</span>
-            </div>
-            <div class="payment-row">
-              <span class="payment-label">Số Tài Khoản:</span>
-              <span class="payment-val copyable" id="dep-acct-num" onclick="copyText('dep-acct-num')">000999988889</span>
-            </div>
-            <div class="payment-row">
-              <span class="payment-label">Tên Tài Khoản:</span>
-              <span class="payment-val" id="dep-acct-name">NGUYEN GIA KHANG</span>
-            </div>
-            <div class="payment-row">
-              <span class="payment-label">Số Tiền Nạp:</span>
-              <span class="payment-val copyable" id="dep-pay-amount" style="color: var(--accent-secondary);" onclick="copyText('dep-pay-amount')">10.000đ</span>
-            </div>
-            <div class="payment-row" style="background: rgba(245, 158, 11, 0.1); padding: 0.4rem 0.6rem; border-radius: 6px; margin-top: 0.25rem;">
-              <span class="payment-label" style="color: var(--warning);">Nội dung (Memo):</span>
-              <span class="payment-val copyable" id="dep-pay-memo" style="color: var(--warning); font-family: monospace; font-size: 1.05rem;" onclick="copyText('dep-pay-memo')">NAP123456</span>
-            </div>
-          </div>
-
-          <div class="loading-spinner"></div>
-          <p style="color: var(--text-secondary); font-size: 0.85rem;" id="deposit-status-text">Đang chờ quét giao dịch từ ngân hàng...</p>
-
-          <div style="display: flex; gap: 0.75rem; width: 100%; margin-top: 1rem;">
-            <button id="btn-cancel-deposit" class="btn btn-danger" style="flex: 1; justify-content: center; padding: 0.75rem;">Hủy Nạp</button>
-            <button id="btn-check-deposit-now" class="btn btn-success" style="flex: 1.5; justify-content: center; padding: 0.75rem;">Tôi Đã Chuyển Khoản</button>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
     <!-- Purchase History Section (Logged-in users) -->
-    <div id="history-section" class="d-none" style="max-width: 800px; margin: 3rem auto;">
-      <h2 style="font-family: var(--font-display); font-size: 2rem; font-weight: 800; margin-bottom: 1.5rem; text-align: center;">Lịch Sử Mua Hàng Của Bạn</h2>
-      <div class="glass-panel" style="padding: 1.5rem; border-radius: 16px;">
-        <div id="history-list">
-          <div class="loading-spinner"></div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Purchase Modal -->
+    <!-- Purchase Modal -->
   <div class="modal-overlay" id="purchase-modal">
     <div class="glass-panel modal-container">
       <div class="modal-header">
