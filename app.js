@@ -251,7 +251,7 @@ function renderProducts(products) {
         <div class="product-footer">
           <div>
             <div class="product-price">${formatVND(p.price)}</div>
-            <div class="stock-badge ${isOutOfStock ? 'empty' : ''}">${isOutOfStock ? 'Hết hàng' : \`Kho: Còn lại ${p.stock}\`}</div>
+            <div class="stock-badge ${isOutOfStock ? 'empty' : ''}">${isOutOfStock ? 'Hết hàng' : `Kho: Còn lại ${p.stock}`}</div>
           </div>
           <button class="btn btn-primary" ${isOutOfStock ? 'disabled style="opacity: 0.5; pointer-events: none;"' : ''} onclick="openPurchaseModal('${p.id}')">
             ${isOutOfStock ? 'Hết hàng' : 'Mua Ngay'}
